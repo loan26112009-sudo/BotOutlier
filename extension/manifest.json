@@ -3,7 +3,6 @@
   "name": "Outlier Finder — YouTube",
   "version": "1.0.0",
   "description": "Détecte en direct les vidéos YouTube qui surperforment (outliers), triées par niche.",
-  "default_locale": "fr",
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
