@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Outlier Finder - by Loan",
   "version": "1.0.0",
-  "description": "Détecte en direct les vidéos YouTube qui surperforment (outliers), triées par niche.",
+  "description": "Détecte en direct les vidéos qui explosent (x3, x10...) sur tes chaînes inspirantes, triées par niche.",
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
