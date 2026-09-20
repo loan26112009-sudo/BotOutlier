@@ -58,4 +58,12 @@ const api = {
 
   runRefresh: () => apiFetch("/refresh/run", { method: "POST" }),
   getStatus: () => apiFetch("/status"),
+
+  getFavorites: (niche) => apiFetch(`/favorites${niche ? `?niche=${encodeURIComponent(niche)}` : ""}`),
+  addFavorite: (payload) => apiFetch("/favorites", { method: "POST", body: JSON.stringify(payload) }),
+  removeFavorite: (videoId) => apiFetch(`/favorites/${videoId}`, { method: "DELETE" }),
+  updateFavorite: (videoId, niche) =>
+    apiFetch(`/favorites/${videoId}`, { method: "PATCH", body: JSON.stringify({ niche }) }),
+  checkFavorites: (ids) =>
+    ids.length ? apiFetch(`/favorites/check?ids=${encodeURIComponent(ids.join(","))}`) : Promise.resolve({ favorited: [] }),
 };

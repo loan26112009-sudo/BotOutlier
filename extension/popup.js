@@ -4,6 +4,10 @@ const nicheSelect = document.getElementById("nicheSelect");
 const minScoreSelect = document.getElementById("minScoreSelect");
 const refreshBtn = document.getElementById("refreshBtn");
 const settingsBtn = document.getElementById("settingsBtn");
+const favListEl = document.getElementById("favList");
+const favNicheSelect = document.getElementById("favNicheSelect");
+
+let nichesCache = [];
 
 document.getElementById("openOptions").addEventListener("click", (e) => {
   e.preventDefault();
@@ -45,16 +49,25 @@ async function loadStatus() {
 
 async function loadNiches() {
   try {
-    const niches = await api.getNiches();
+    nichesCache = await api.getNiches();
     const { lastNiche } = await chrome.storage.local.get("lastNiche");
+
     nicheSelect.innerHTML = '<option value="">Toutes les niches</option>';
-    for (const n of niches) {
+    for (const n of nichesCache) {
       const opt = document.createElement("option");
       opt.value = n.name;
       opt.textContent = `${n.name} (${n.channel_count})`;
       nicheSelect.appendChild(opt);
     }
     if (lastNiche) nicheSelect.value = lastNiche;
+
+    favNicheSelect.innerHTML = '<option value="">Toutes les niches</option>';
+    for (const n of nichesCache) {
+      const opt = document.createElement("option");
+      opt.value = n.name;
+      opt.textContent = n.name;
+      favNicheSelect.appendChild(opt);
+    }
   } catch (e) {
     // le backend n'est peut-être pas encore lancé
   }
@@ -137,6 +150,108 @@ refreshBtn.addEventListener("click", async () => {
     refreshBtn.disabled = false;
     refreshBtn.textContent = "↻";
   }
+});
+
+// --- Onglet "Mes picks" (favoris ajoutés via le cœur sur YouTube) ---
+
+function formatFavDate(iso) {
+  if (!iso) return "";
+  const d = new Date(iso + "Z");
+  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+}
+
+async function loadFavorites() {
+  favListEl.innerHTML = '<p class="empty">Chargement…</p>';
+  try {
+    const favorites = await api.getFavorites(favNicheSelect.value || undefined);
+    if (!favorites.length) {
+      favListEl.innerHTML =
+        '<p class="empty">Aucun coup de cœur pour l\'instant.<br>Clique sur le ♡ qui apparaît sur les miniatures YouTube pour en ajouter.</p>';
+      return;
+    }
+    const nicheById = Object.fromEntries(nichesCache.map((n) => [n.id, n.name]));
+
+    favListEl.innerHTML = "";
+    for (const f of favorites) {
+      const card = document.createElement("div");
+      card.className = "fav-card";
+
+      const img = document.createElement("img");
+      img.src = f.thumbnail_url || "";
+      img.loading = "lazy";
+
+      const body = document.createElement("div");
+      body.className = "card-body";
+
+      const title = document.createElement("a");
+      title.className = "card-title";
+      title.href = f.url || `https://www.youtube.com/watch?v=${f.youtube_video_id}`;
+      title.target = "_blank";
+      title.textContent = f.title || "(sans titre)";
+
+      const channelLine = document.createElement("div");
+      channelLine.className = "card-meta";
+      channelLine.textContent = `${f.channel_title || "?"} · ${formatFavDate(f.created_at)}`;
+
+      const footer = document.createElement("div");
+      footer.className = "fav-card-footer";
+
+      const nicheSel = document.createElement("select");
+      const noneOpt = document.createElement("option");
+      noneOpt.value = "";
+      noneOpt.textContent = "Non classé";
+      nicheSel.appendChild(noneOpt);
+      for (const n of nichesCache) {
+        const opt = document.createElement("option");
+        opt.value = n.name;
+        opt.textContent = n.name;
+        nicheSel.appendChild(opt);
+      }
+      nicheSel.value = nicheById[f.niche_id] || "";
+      nicheSel.addEventListener("change", async () => {
+        try {
+          await api.updateFavorite(f.youtube_video_id, nicheSel.value || null);
+          await loadNiches();
+        } catch (e) {
+          // silencieux : la sélection reste visuellement à jour côté UI
+        }
+      });
+
+      const removeBtn = document.createElement("button");
+      removeBtn.className = "fav-remove-btn";
+      removeBtn.textContent = "✕";
+      removeBtn.title = "Retirer de mes picks";
+      removeBtn.addEventListener("click", async () => {
+        await api.removeFavorite(f.youtube_video_id);
+        await loadFavorites();
+      });
+
+      footer.appendChild(nicheSel);
+      footer.appendChild(removeBtn);
+
+      body.appendChild(title);
+      body.appendChild(channelLine);
+      body.appendChild(footer);
+      card.appendChild(img);
+      card.appendChild(body);
+      favListEl.appendChild(card);
+    }
+  } catch (e) {
+    favListEl.innerHTML = `<p class="empty">Impossible de charger tes picks.<br>${e.message}</p>`;
+  }
+}
+
+favNicheSelect.addEventListener("change", loadFavorites);
+
+document.querySelectorAll(".tab-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    const tab = btn.dataset.tab;
+    document.getElementById("autoTab").classList.toggle("hidden", tab !== "auto");
+    document.getElementById("favoritesTab").classList.toggle("hidden", tab !== "favorites");
+    if (tab === "favorites") loadFavorites();
+  });
 });
 
 (async function init() {

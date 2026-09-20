@@ -76,3 +76,22 @@ class VideoSnapshot(Base):
     youtube_video_id = Column(String, index=True, nullable=False)
     view_count = Column(Integer)
     captured_at = Column(DateTime, default=dt.datetime.utcnow)
+
+
+class FavoritePick(Base):
+    """Vidéo mise en favori manuellement (clic sur le cœur) depuis YouTube."""
+
+    __tablename__ = "favorite_picks"
+
+    id = Column(Integer, primary_key=True)
+    youtube_video_id = Column(String, unique=True, nullable=False, index=True)
+    title = Column(String, nullable=True)
+    channel_title = Column(String, nullable=True)
+    channel_youtube_id = Column(String, nullable=True)
+    thumbnail_url = Column(String, nullable=True)
+    url = Column(String, nullable=True)
+    niche_id = Column(Integer, ForeignKey("niches.id"), nullable=True)
+    source_page = Column(String, nullable=True)  # "watch" ou "grid"
+    created_at = Column(DateTime, default=dt.datetime.utcnow)
+
+    niche = relationship("Niche")

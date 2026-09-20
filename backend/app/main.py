@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
 from .db import Base, SessionLocal, engine
-from .routers import channels, discover, niches, outliers, refresh, status
+from .routers import channels, discover, favorites, niches, outliers, refresh, status
 from .scheduler import start_scheduler
 from .seed import ensure_default_niches
 
@@ -24,6 +24,7 @@ app.include_router(niches.router)
 app.include_router(channels.router)
 app.include_router(outliers.router)
 app.include_router(discover.router)
+app.include_router(favorites.router)
 app.include_router(refresh.router)
 app.include_router(status.router)
 

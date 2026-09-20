@@ -86,6 +86,35 @@ class BulkAddRequest(BaseModel):
     channel_ids: list[str]
 
 
+class FavoriteCreate(BaseModel):
+    youtube_video_id: str
+    title: str | None = None
+    channel_title: str | None = None
+    channel_youtube_id: str | None = None
+    thumbnail_url: str | None = None
+    url: str | None = None
+    niche: str | None = None
+    source_page: str | None = None
+
+
+class FavoriteUpdate(BaseModel):
+    niche: str | None = None
+
+
+class FavoriteOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    youtube_video_id: str
+    title: str | None
+    channel_title: str | None
+    channel_youtube_id: str | None
+    thumbnail_url: str | None
+    url: str | None
+    niche_id: int | None
+    created_at: dt.datetime
+
+
 class StatusOut(BaseModel):
     tracked_channels: int
     tracked_niches: int

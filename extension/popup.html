@@ -16,21 +16,40 @@
 
   <div id="statusBar" class="status-bar">Chargement…</div>
 
-  <div class="toolbar">
-    <select id="nicheSelect">
-      <option value="">Toutes les niches</option>
-    </select>
-    <select id="minScoreSelect">
-      <option value="">Seuil : par défaut</option>
-      <option value="2">x2 et +</option>
-      <option value="3">x3 et +</option>
-      <option value="5">x5 et +</option>
-      <option value="10">x10 et +</option>
-    </select>
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="auto">Outliers auto</button>
+    <button class="tab-btn" data-tab="favorites">❤️ Mes picks</button>
   </div>
 
-  <div id="list" class="list">
-    <p class="empty">Chargement des outliers…</p>
+  <div id="autoTab" class="tab-panel">
+    <div class="toolbar">
+      <select id="nicheSelect">
+        <option value="">Toutes les niches</option>
+      </select>
+      <select id="minScoreSelect">
+        <option value="">Seuil : par défaut</option>
+        <option value="2">x2 et +</option>
+        <option value="3">x3 et +</option>
+        <option value="5">x5 et +</option>
+        <option value="10">x10 et +</option>
+      </select>
+    </div>
+
+    <div id="list" class="list">
+      <p class="empty">Chargement des outliers…</p>
+    </div>
+  </div>
+
+  <div id="favoritesTab" class="tab-panel hidden">
+    <div class="toolbar">
+      <select id="favNicheSelect">
+        <option value="">Toutes les niches</option>
+      </select>
+    </div>
+
+    <div id="favList" class="list">
+      <p class="empty">Chargement de tes picks…</p>
+    </div>
   </div>
 
   <footer>

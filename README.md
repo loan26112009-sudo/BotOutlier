@@ -33,6 +33,10 @@ crées). Le tout consultable depuis une **extension Chrome**.
   chaîne donnée ou par mot-clé de niche.
 - Un badge + une notification Chrome préviennent quand un **nouvel outlier**
   vient d'être détecté.
+- En te baladant sur YouTube, un **petit cœur ♡** apparaît sur chaque miniature
+  (et sur la page de lecture) : un clic l'ajoute à l'onglet **"Mes picks"** de
+  l'extension, sauvegardé en base côté backend (persistant, pas juste dans le
+  navigateur).
 
 ## 1. Lancer le backend
 
@@ -73,21 +77,58 @@ de chaînes suivies). Seules les fonctions de **découverte** de chaînes
 (recherche par mot-clé ou par chaîne similaire) coûtent 100 unités/appel —
 utilise-les ponctuellement, pas en boucle.
 
-## 2. Installer l'extension Chrome
+## 2. Installer l'extension dans Chrome
+
+### Option A — Mode développeur (le plus rapide, pour un usage perso)
+
+C'est la méthode normale pour une extension "maison" non publiée — gratuite,
+immédiate, et c'est ce que font la plupart des devs pour leurs propres outils.
 
 1. Ouvre `chrome://extensions`.
-2. Active le **mode développeur** (en haut à droite).
+2. Active le **mode développeur** (interrupteur en haut à droite).
 3. Clique **"Charger l'extension non empaquetée"** et sélectionne le dossier
    `extension/`.
-4. Clique sur l'icône de l'extension → l'engrenage ⚙ (ou clic droit → Options)
-   pour ouvrir la page de réglages.
-5. Vérifie l'URL du backend (`http://127.0.0.1:8000` par défaut) et clique
+4. L'icône Outlier Finder apparaît dans la barre d'extensions (épingle-la avec
+   le 📌 pour la garder visible).
+5. Clique dessus → l'engrenage ⚙ (ou clic droit sur l'icône → Options) pour
+   ouvrir la page de réglages.
+6. Vérifie l'URL du backend (`http://127.0.0.1:8000` par défaut) et clique
    "Enregistrer" — le badge doit passer sur "connecté ✓".
 
-> L'extension est configurée pour parler à `localhost`/`127.0.0.1`. Si tu
-> déploies le backend ailleurs (serveur distant, Docker sur un autre host),
-> ajoute son origine dans `host_permissions` de `extension/manifest.json`
-> et dans `CORS_ORIGINS` de `backend/.env`, puis recharge l'extension.
+> ⚠️ En mode développeur, Chrome désactive parfois l'extension après un
+> redémarrage du navigateur ("mode développeur activé" en bandeau) — c'est
+> normal et sans danger, il suffit de la réactiver sur `chrome://extensions`.
+
+L'extension est configurée pour parler à `localhost`/`127.0.0.1` : elle ne
+fonctionne que **sur la machine où tourne le backend**. Si tu déploies le
+backend ailleurs (serveur distant, Docker sur un autre host), ajoute son
+origine dans `host_permissions` de `extension/manifest.json` et dans
+`CORS_ORIGINS` de `backend/.env`, puis recharge l'extension.
+
+### Option B — Publier sur le Chrome Web Store (pour la partager avec d'autres)
+
+Si tu veux que d'autres personnes l'installent en un clic (sans "mode
+développeur"), il faut la publier sur le Web Store :
+
+1. Crée un compte développeur sur le
+   [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole)
+   (frais unique de 5 $).
+2. Zippe le contenu du dossier `extension/` (le zip doit contenir `manifest.json`
+   à sa racine, pas un sous-dossier).
+3. Dans le Dashboard, "Nouvel article" → upload le zip.
+4. Renseigne la fiche (description, catégorie, captures d'écran, **politique de
+   confidentialité** — obligatoire car l'extension fait des requêtes réseau
+   vers ton backend).
+5. Soumets pour revue (Google met généralement quelques jours).
+
+**Point important avant de publier publiquement** : par défaut, l'extension
+parle à un backend `localhost` — donc seul toi (qui fais tourner le backend en
+local) peux réellement l'utiliser, même si quelqu'un d'autre l'installe. Pour
+que d'autres personnes en profitent sans rien installer côté serveur, il faut
+d'abord **déployer le backend sur un serveur accessible publiquement** (le
+`Dockerfile` fourni dans `backend/` est un bon point de départ — Railway,
+Fly.io, un VPS...), puis mettre son URL en dur (ou par défaut) dans
+`extension/api.js` et l'ajouter à `host_permissions`.
 
 ## 3. Utiliser le bot
 
@@ -112,6 +153,29 @@ Dans le **popup** (clic sur l'icône) :
 - Un badge rouge sur l'icône + une notification système apparaissent quand
   l'extension détecte de nouveaux outliers (vérification toutes les 15 min).
 
+## 4. Marquer tes propres outliers en un clic (le cœur ❤️)
+
+En plus de la détection automatique, tu peux repérer un outlier "à l'œil" en
+te baladant sur YouTube :
+
+- **Sur les miniatures** (accueil, recherche, suggestions...) : survole une
+  vidéo, un petit ♡ apparaît en haut à droite de la miniature. Clique dessus
+  pour l'ajouter à tes picks (il devient ♥ rouge).
+- **Sur la page de lecture** : un cœur flottant en bas à droite de l'écran
+  fait la même chose pour la vidéo en cours.
+- Tout est enregistré côté **backend** (pas juste dans le navigateur) : ouvre
+  l'onglet **"❤️ Mes picks"** du popup pour retrouver tous tes coups de cœur,
+  les classer par niche (menu déroulant sur chaque carte), ou les retirer.
+
+Comme c'est stocké en base sur le backend, ta liste survit à un changement
+d'ordinateur, une réinstallation de l'extension, un nettoyage du cache
+Chrome, etc. — tant que tu pointes vers la même base de données.
+
+> YouTube change régulièrement la structure de ses pages ; si le cœur
+> n'apparaît plus sur les miniatures après une mise à jour de YouTube, les
+> sélecteurs dans `extension/content.js` (fonction `scanThumbnails`) sont
+> l'endroit à ajuster.
+
 ## Détails techniques
 
 ### Backend (`backend/`)
@@ -127,17 +191,23 @@ Dans le **popup** (clic sur l'icône) :
 - `app/scheduler.py` — APScheduler, job toutes les `REFRESH_INTERVAL_HOURS`
   (premier passage immédiat au démarrage).
 - `app/routers/` — endpoints REST (`/niches`, `/channels`, `/outliers`,
-  `/discover/*`, `/refresh/run`, `/status`).
+  `/discover/*`, `/favorites/*`, `/refresh/run`, `/status`).
 
 ### Extension (`extension/`)
 
 - `manifest.json` — Manifest V3, permissions minimales (`storage`, `alarms`,
-  `notifications`).
+  `notifications`) + `content_scripts` sur `youtube.com`.
 - `api.js` — client fetch partagé vers le backend.
-- `popup.html/js/css` — liste des outliers, filtres, refresh manuel.
+- `popup.html/js/css` — onglets "Outliers auto" et "❤️ Mes picks", filtres,
+  refresh manuel.
 - `options.html/js/css` — gestion niches/chaînes/découverte.
-- `background.js` — service worker, poll toutes les 15 min pour les
-  notifications de nouveaux outliers.
+- `background.js` — service worker : poll toutes les 15 min pour les
+  notifications de nouveaux outliers, et relais réseau (`fetch`) pour le
+  content script (qui ne fait jamais d'appel réseau direct, pour rester
+  simple vis-à-vis de la CSP des pages YouTube).
+- `content.js` / `content.css` — injectés sur `youtube.com` : cœur sur chaque
+  miniature + cœur flottant sur la page de lecture, communication avec
+  `background.js` via `chrome.runtime.sendMessage`.
 
 ### Aller plus loin (pistes non implémentées)
 

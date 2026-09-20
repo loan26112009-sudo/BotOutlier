@@ -1,0 +1,65 @@
+.of-heart-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 9999;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(17, 24, 39, 0.75);
+  color: #fff;
+  font-size: 15px;
+  line-height: 26px;
+  text-align: center;
+  cursor: pointer;
+  padding: 0;
+  opacity: 0;
+  transition: opacity 0.15s ease, transform 0.15s ease, background 0.15s ease;
+}
+
+a#thumbnail:hover .of-heart-btn,
+.of-heart-btn.of-active {
+  opacity: 1;
+}
+
+.of-heart-btn.of-active {
+  background: rgba(239, 68, 68, 0.92);
+}
+
+.of-heart-btn:hover {
+  transform: scale(1.15);
+}
+
+.of-heart-btn.of-loading {
+  opacity: 0.6;
+}
+
+.of-floating-heart {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 999999;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: none;
+  background: #111827;
+  color: #fff;
+  font-size: 22px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.of-floating-heart:hover {
+  transform: scale(1.08);
+}
+
+.of-floating-heart.of-active {
+  background: #ef4444;
+}
+
+.of-floating-heart.of-loading {
+  opacity: 0.7;
+}
