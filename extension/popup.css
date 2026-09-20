@@ -181,6 +181,13 @@ footer a:hover { text-decoration: underline; }
   color: #4b5563;
   line-height: 1.4;
 }
+.attribution a {
+  color: #6b7280;
+  text-decoration: underline;
+}
+.attribution a:hover {
+  color: #f87171;
+}
 
 .fav-card {
   display: flex;

@@ -1,52 +1,58 @@
-# Fiche Chrome Web Store — copier-coller prêt à l'emploi
+# Chrome Web Store listing — copy-paste ready
 
-## Nom
+## Name
 Outlier Finder - by Loan
 
-## Résumé court (champ "Summary", 132 caractères max)
+## Short summary (132 characters max)
 
 ```
-Détecte en direct les vidéos qui explosent (x3, x10...) sur tes chaînes inspirantes, triées par niche.
+Catch YouTube videos that are blowing up (3x, 10x views) on channels you track, sorted by niche. Refreshes every 2h.
 ```
 
-## Description détaillée (champ "Detailed description")
+## Detailed description
 
-> Le Web Store n'accepte pas le markdown : copie le bloc ci-dessous tel quel,
-> les sauts de ligne et les émojis suffisent à structurer visuellement la fiche.
+> The Web Store doesn't render markdown — paste the block below as-is, the
+> line breaks and emojis do the visual structuring on their own.
 
 ```
-🚀 ARRÊTE DE SCROLLER AU HASARD. TROUVE LES FORMATS QUI EXPLOSENT — AVANT TOUT LE MONDE.
+🚀 STOP GUESSING WHAT'S WORKING ON YOUTUBE. LET THE DATA FIND IT FOR YOU.
 
-Sur YouTube, il y a toujours UNE vidéo qui sort du lot sur une chaîne : celle qui fait x5, x10 les vues habituelles. C'est elle qui te dit ce qui marche vraiment, maintenant. Le problème ? Il faut scroller des dizaines de chaînes à la main pour la repérer — et le temps que tu la trouves, tout le monde l'a déjà vue.
+Every niche has that one video that blows past everything else a channel normally gets — 3x, 5x, 10x the usual views. That's the clearest signal there is that a format is working right now. The problem is finding it before everyone else does, across dozens of channels, without refreshing them by hand all day.
 
-Outlier Finder fait ce travail à ta place, en continu, pendant que tu fais autre chose.
+Outlier Finder does that in the background, around the clock, and sorts what it finds by niche.
 
-✅ CE QUE ÇA FAIT
-• Suit les chaînes YouTube de ton choix (les tiennes, celles de ta niche, tes concurrents)
-• Compare chaque nouvelle vidéo aux habitudes de SA PROPRE chaîne — pas un classement générique, un vrai signal par chaîne
-• Ne remonte que les vraies pépites : x3, x5, x10 la moyenne habituelle
-• Range tout par niche : Gaming, Cinéma, GTA, Fortnite, Divertissement, Tech... ou tes propres catégories
-• Rafraîchit automatiquement toutes les 2h : tu ne rates jamais un nouvel outlier
-• Un cœur ♡ directement sur YouTube pour marquer toi-même une pépite en un clic, où que tu sois en train de scroller
-• Découverte automatique de chaînes similaires à partir d'un seul exemple ou d'un simple mot-clé de niche
+Made by a creator, for creators.
 
-🎯 POUR QUI
-Créateurs, monteurs, community managers, agences — toute personne qui a besoin d'inspiration de format basée sur des données réelles, pas sur son feed personnalisé YouTube.
 
-⚡ COMMENT ÇA MARCHE
-1. Ajoute les chaînes qui t'inspirent (ou laisse l'outil t'en proposer)
-2. Le bot scanne, compare, détecte — automatiquement, toutes les 2h
-3. Tu ouvres l'extension : les outliers du jour t'attendent, triés par niche, prêts à être disséqués
+WHAT YOU GET
 
-🔒 SÉRIEUX ET TRANSPARENT
-Données 100% officielles via l'API YouTube Data v3 — aucun scraping. Tes données restent sur ta machine. Non affilié à YouTube ni à Google.
+🎯 Real outlier detection, per channel - every new video is compared to that channel's OWN median, not a generic trending list. A small channel's 3x is caught just as fast as a big channel's.
+🔄 Auto-refresh every 2 hours - new outliers show up while you're doing something else entirely.
+🗂️ Sorted by niche - Gaming, Cinema, GTA, Fortnite, Entertainment, Tech... or build your own categories.
+❤️ One-click heart, right on YouTube - spot a video yourself while scrolling your feed, tap the heart on the thumbnail (or the floating one on the watch page), it's saved instantly to "My Picks".
+🔍 Channel discovery - drop in one channel you like, or a single niche keyword, and get a list of similar channels to start tracking.
+📊 Real numbers, never substituted - the exact view count YouTube's API returns, plus an outlier score (x4.2, x10...) layered on top.
+🔔 New-outlier alerts - a badge and a notification the moment something spikes, popup closed or not.
+🧭 Two feeds, one popup - the auto-detected outlier feed, and "My Picks" for everything you flagged yourself.
 
-Outlier Finder - by Loan.
+Everything runs on your own backend, so you control what channels get tracked and how far back your history goes.
+
+
+PRIVACY
+
+No YouTube account needed. No OAuth, no password.
+Official YouTube Data API v3 only - zero scraping.
+Your data stays on your machine, in your own local database.
+Not affiliated with YouTube or Google.
+
+
+Updated regularly.
+Made with ❤️ by Loan - https://www.youtube.com/channel/UCAKDeRYLXUbR87rGDrXOpZg
 ```
 
-## Catégorie suggérée
-Productivité (Productivity)
+## Suggested category
+Productivity
 
 ## Notes
-- Le résumé court est identique au champ `description` de `manifest.json` (limite Chrome de 132 caractères) — les deux sont donc toujours synchronisés.
-- Pense à joindre 1-3 captures d'écran (popup avec des outliers, onglet "Mes picks", le cœur sur une miniature YouTube) : c'est ce qui convertit le plus sur une fiche Web Store, bien plus que le texte.
+- The short summary matches `manifest.json`'s `description` field (Chrome's 132-character limit) — keep both in sync if you edit one.
+- Screenshots convert far better than copy on a Web Store listing. Grab 2-3 once you have real data flowing: the popup with actual outliers in it, the "My Picks" tab, and the heart in action on a YouTube thumbnail.

@@ -163,6 +163,12 @@ button.secondary:hover { background: #4b5563; }
   text-align: center;
   margin: 16px 0 0;
 }
+.legal-footer a {
+  color: #93c5fd;
+}
+.legal-footer a:hover {
+  color: #f87171;
+}
 .legal-footer code {
   background: #1f2937;
   border-radius: 3px;

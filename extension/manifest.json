@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Outlier Finder - by Loan",
   "version": "1.0.0",
-  "description": "Détecte en direct les vidéos qui explosent (x3, x10...) sur tes chaînes inspirantes, triées par niche.",
+  "description": "Catch YouTube videos that are blowing up (3x, 10x views) on channels you track, sorted by niche. Refreshes every 2h.",
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
