@@ -13,6 +13,7 @@ function setApiKeyState(configured) {
   apiKeyConfigured = configured;
   document.getElementById("apiKeyBanner").classList.toggle("hidden", configured);
   document.getElementById("createFlowBtn").disabled = !configured;
+  document.getElementById("createFlowLock").classList.toggle("hidden", configured);
 }
 
 async function refreshApiKeyState() {
@@ -25,8 +26,17 @@ async function initSettings() {
   const settings = await api.getSettings();
   document.getElementById("apiKeyInput").value = settings.youtube_api_key || "";
   document.getElementById("refreshHoursInput").value = settings.refresh_interval_hours || 2;
+  document.getElementById("heartSearchModeToggle").checked = settings.heart_search_mode !== false;
+  document.getElementById("heartViewerModeToggle").checked = settings.heart_viewer_mode !== false;
   await pingApiKey();
 }
+
+document.getElementById("heartSearchModeToggle").addEventListener("change", (e) => {
+  api.updateSettings({ heart_search_mode: e.target.checked });
+});
+document.getElementById("heartViewerModeToggle").addEventListener("change", (e) => {
+  api.updateSettings({ heart_viewer_mode: e.target.checked });
+});
 
 async function pingApiKey() {
   const pill = document.getElementById("apiKeyStatus");
@@ -268,7 +278,48 @@ document.getElementById("findByQuery").addEventListener("click", async () => {
   }
 });
 
-// --- Flux simplifié : chaîne + niche décrite en texte libre + chaînes similaires ---
+// --- Aperçu de la chaîne perso pendant la saisie (juste un nom suffit) ---
+// Évite les ajouts hasardeux (taper "moi" ou un nom approximatif et se
+// retrouver avec une chaîne au hasard) : on montre ce qui a été trouvé
+// avant même de cliquer sur "Créer mon flux".
+
+let previewTimeout = null;
+document.getElementById("ownChannelInput").addEventListener("input", () => {
+  clearTimeout(previewTimeout);
+  const value = document.getElementById("ownChannelInput").value.trim();
+  const preview = document.getElementById("ownChannelPreview");
+  if (!value) {
+    preview.className = "channel-preview hidden";
+    return;
+  }
+  if (!apiKeyConfigured) return;
+  previewTimeout = setTimeout(async () => {
+    preview.className = "channel-preview";
+    preview.textContent = "Recherche…";
+    try {
+      const result = await api.previewChannel(value);
+      if (!result) {
+        preview.className = "channel-preview err";
+        preview.textContent = "❌ Chaîne introuvable — vérifie le nom";
+        return;
+      }
+      preview.className = "channel-preview ok";
+      preview.innerHTML = "";
+      const img = document.createElement("img");
+      img.src = result.thumbnail_url || "";
+      const text = document.createElement("span");
+      text.textContent = `✓ ${result.title}${result.subscriber_count ? ` · ${result.subscriber_count.toLocaleString("fr-FR")} abonnés` : ""}`;
+      preview.appendChild(img);
+      preview.appendChild(text);
+    } catch (e) {
+      preview.className = "channel-preview err";
+      preview.textContent = e.message;
+    }
+  }, 600);
+});
+
+// --- Flux simplifié : chaîne (optionnelle) + niche décrite en texte libre +
+// chaînes similaires (optionnel) + découverte automatique par niche ---
 
 document.getElementById("createFlowBtn").addEventListener("click", async () => {
   const channelInput = document.getElementById("ownChannelInput");
@@ -280,50 +331,31 @@ document.getElementById("createFlowBtn").addEventListener("click", async () => {
   const channel = channelInput.value.trim();
   const niche = nicheInput.value.trim();
 
-  if (!channel) return setFeedback(feedback, "Colle le lien de ta chaîne YouTube pour commencer.", false);
-  if (!niche) return setFeedback(feedback, "Décris ta niche en quelques mots.", false);
-
-  const similarLinks = linksInput.value
-    .split(/[\n,]/)
-    .map((s) => s.trim())
-    .filter(Boolean);
+  if (!niche) return setFeedback(feedback, "Décris ta niche en quelques mots pour commencer.", false);
 
   btn.disabled = true;
-  btn.textContent = "Création en cours…";
+  btn.textContent = "Création en cours… (ça cherche aussi de nouvelles chaînes pour toi)";
   setFeedback(feedback, "", true);
 
-  const errors = [];
-  let added = 0;
-
   try {
-    await api.addChannel(channel, niche);
-    added++;
-  } catch (e) {
-    errors.push(`ta chaîne : ${e.message}`);
-  }
-
-  for (const link of similarLinks) {
-    try {
-      await api.addChannel(link, niche);
-      added++;
-    } catch (e) {
-      errors.push(`${link} : ${e.message}`);
+    const result = await api.createFlow(channel, niche, linksInput.value);
+    const total = result.added.length;
+    if (total > 0) {
+      const bits = [`✓ ${total} chaîne(s) dans "${niche}"`];
+      if (result.discovered_count) bits.push(`dont ${result.discovered_count} trouvée(s) automatiquement`);
+      if (result.errors.length) bits.push(`${result.errors.length} en échec`);
+      setFeedback(feedback, bits.join(" — "), true);
+      channelInput.value = "";
+      linksInput.value = "";
+      document.getElementById("ownChannelPreview").className = "channel-preview hidden";
+    } else {
+      setFeedback(feedback, `Rien n'a pu être ajouté : ${result.errors[0] || "essaie une niche plus courante."}`, false);
     }
+  } catch (e) {
+    setFeedback(feedback, e.message, false);
   }
 
-  if (added > 0) {
-    setFeedback(
-      feedback,
-      `✓ ${added} chaîne(s) ajoutée(s) à "${niche}".${errors.length ? ` (${errors.length} lien(s) en échec)` : ""}`,
-      true
-    );
-    channelInput.value = "";
-    linksInput.value = "";
-  } else {
-    setFeedback(feedback, `Rien n'a pu être ajouté : ${errors[0] || "vérifie le lien de ta chaîne."}`, false);
-  }
-
-  btn.disabled = false;
+  btn.disabled = !apiKeyConfigured;
   btn.textContent = "🚀 Créer mon flux d'outliers";
   await loadNiches();
   await loadChannels();

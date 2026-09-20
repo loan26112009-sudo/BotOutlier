@@ -27,23 +27,31 @@
 
     <section class="card onboarding-card">
       <div class="field">
-        <label for="ownChannelInput">Ta chaîne YouTube (ou une chaîne à suivre)</label>
-        <input id="ownChannelInput" type="text" placeholder="youtube.com/@tachaine" />
+        <label for="ownChannelInput">
+          Ta chaîne YouTube <span class="optional">(optionnel — juste son nom suffit)</span>
+        </label>
+        <input id="ownChannelInput" type="text" placeholder="Ex : MrBeast" autocomplete="off" />
+        <p id="ownChannelPreview" class="channel-preview hidden"></p>
       </div>
 
       <div class="field">
         <label for="nicheDescInput">Décris ta niche</label>
         <input id="nicheDescInput" type="text" placeholder="Ex : Gaming FR, GTA RP, Cinéma, Tech..." />
+        <p class="field-note">On s'en sert pour trouver automatiquement des chaînes dans cette niche.</p>
       </div>
 
       <div class="field">
         <label for="similarLinksInput">
-          Chaînes similaires <span class="optional">(optionnel — un lien par ligne)</span>
+          Chaînes similaires <span class="optional">(optionnel — un lien ou un nom par ligne)</span>
         </label>
-        <textarea id="similarLinksInput" rows="3" placeholder="youtube.com/@chaine1&#10;youtube.com/@chaine2"></textarea>
+        <textarea id="similarLinksInput" rows="3" placeholder="MrBeast&#10;youtube.com/@chaine2"></textarea>
       </div>
 
-      <button id="createFlowBtn" class="pill-btn">🚀 Créer mon flux d'outliers</button>
+      <button id="createFlowBtn" class="pill-btn" disabled>🚀 Créer mon flux d'outliers</button>
+      <p id="createFlowLock" class="field-note lock-note hidden">
+        🔒 Ce bouton reste grisé tant que tu n'as pas ajouté ta clé API YouTube
+        (juste en dessous, dans "Réglages avancés").
+      </p>
       <p id="createFeedback" class="feedback"></p>
     </section>
 
@@ -75,6 +83,22 @@
         <div class="row">
           <input id="refreshHoursInput" type="text" placeholder="2" style="max-width: 100px;" />
           <button id="saveRefreshHours" class="ghost-btn">Enregistrer</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Le cœur sur YouTube</label>
+        <div class="toggle-row">
+          <label class="toggle">
+            <input type="checkbox" id="heartSearchModeToggle" />
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            <span class="toggle-label">Mode recherche — cœur sur les miniatures en naviguant</span>
+          </label>
+          <label class="toggle">
+            <input type="checkbox" id="heartViewerModeToggle" />
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            <span class="toggle-label">Mode spectateur — cœur flottant sur la page de lecture</span>
+          </label>
         </div>
       </div>
 

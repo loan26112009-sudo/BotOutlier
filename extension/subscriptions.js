@@ -4,10 +4,9 @@
 // aucun appel réseau — c'est une préférence d'affichage, pas une donnée
 // d'outlier.
 //
-// Expérimental au même titre que le menu ⋮ : le menu latéral de YouTube est
-// une des zones les plus retravaillées de son DOM. Tout est protégé par des
-// try/catch pour ne jamais casser la navigation si les sélecteurs deviennent
-// obsolètes.
+// Expérimental : le menu latéral de YouTube est une des zones les plus
+// retravaillées de son DOM. Tout est protégé par des try/catch pour ne
+// jamais casser la navigation si les sélecteurs deviennent obsolètes.
 (function () {
   const STORAGE_KEY = "favoriteSubscriptions";
   const PROCESSED_ATTR = "data-of-sub-processed";

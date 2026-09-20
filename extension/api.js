@@ -46,6 +46,8 @@ const api = {
   getChannels: (niche) => call("getChannels", niche),
   addChannel: (channel, niche) => call("addChannel", channel, niche),
   deleteChannel: (id) => call("deleteChannel", id),
+  previewChannel: (channel) => call("previewChannel", channel),
+  createFlow: (ownChannel, niche, similarLinksText) => call("createFlow", ownChannel, niche, similarLinksText),
 
   getOutliers: (params = {}) => call("getOutliers", params),
 

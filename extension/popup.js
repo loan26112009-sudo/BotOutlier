@@ -1,4 +1,6 @@
 const listEl = document.getElementById("list");
+const listLongEl = document.getElementById("listLong");
+const listShortsEl = document.getElementById("listShorts");
 const statusBar = document.getElementById("statusBar");
 const statusText = document.getElementById("statusText");
 const nicheSelect = document.getElementById("nicheSelect");
@@ -107,6 +109,44 @@ async function loadNiches() {
   }
 }
 
+function buildOutlierCard(o) {
+  const a = document.createElement("a");
+  a.className = "card";
+  a.href = `https://www.youtube.com/watch?v=${o.video.youtube_video_id}`;
+  a.target = "_blank";
+
+  const img = document.createElement("img");
+  img.src = o.video.thumbnail_url || "";
+  img.loading = "lazy";
+
+  const body = document.createElement("div");
+  body.className = "card-body";
+
+  const title = document.createElement("p");
+  title.className = "card-title";
+  title.textContent = o.video.title || "(sans titre)";
+
+  const meta = document.createElement("div");
+  meta.className = "card-meta";
+  meta.innerHTML = `
+    <span class="score">x${o.video.outlier_score.toFixed(1)}</span>
+    <span>${formatViews(o.video.view_count)} vues</span>
+    <span class="niche-tag">${o.niche}</span>
+    ${o.is_new ? '<span class="badge-new">NOUVEAU</span>' : ""}
+  `;
+
+  const channelLine = document.createElement("div");
+  channelLine.className = "card-meta";
+  channelLine.textContent = `${o.channel_title || "?"} · ${formatDate(o.video.published_at)}`;
+
+  body.appendChild(title);
+  body.appendChild(channelLine);
+  body.appendChild(meta);
+  a.appendChild(img);
+  a.appendChild(body);
+  return a;
+}
+
 async function loadOutliers() {
   listEl.innerHTML = '<p class="empty">Chargement…</p>';
   try {
@@ -119,47 +159,36 @@ async function loadOutliers() {
       listEl.innerHTML = '<p class="empty">🔍 Rien pour l\'instant.<br>Ajoute une chaîne dans les réglages, le prochain scan fera le tri.</p>';
       return;
     }
+
     listEl.innerHTML = "";
-    for (const o of outliers) {
-      const a = document.createElement("a");
-      a.className = "card";
-      a.href = `https://www.youtube.com/watch?v=${o.video.youtube_video_id}`;
-      a.target = "_blank";
+    listEl.appendChild(buildSections());
 
-      const img = document.createElement("img");
-      img.src = o.video.thumbnail_url || "";
-      img.loading = "lazy";
+    const longEl = document.getElementById("listLong");
+    const shortsEl = document.getElementById("listShorts");
+    const longVideos = outliers.filter((o) => !o.video.is_short);
+    const shortVideos = outliers.filter((o) => o.video.is_short);
 
-      const body = document.createElement("div");
-      body.className = "card-body";
+    longEl.parentElement.classList.toggle("hidden", longVideos.length === 0);
+    shortsEl.parentElement.classList.toggle("hidden", shortVideos.length === 0);
 
-      const title = document.createElement("p");
-      title.className = "card-title";
-      title.textContent = o.video.title || "(sans titre)";
-
-      const meta = document.createElement("div");
-      meta.className = "card-meta";
-      meta.innerHTML = `
-        <span class="score">x${o.video.outlier_score.toFixed(1)}</span>
-        <span>${formatViews(o.video.view_count)} vues</span>
-        <span class="niche-tag">${o.niche}</span>
-        ${o.is_new ? '<span class="badge-new">NOUVEAU</span>' : ""}
-      `;
-
-      const channelLine = document.createElement("div");
-      channelLine.className = "card-meta";
-      channelLine.textContent = `${o.channel_title || "?"} · ${formatDate(o.video.published_at)}`;
-
-      body.appendChild(title);
-      body.appendChild(channelLine);
-      body.appendChild(meta);
-      a.appendChild(img);
-      a.appendChild(body);
-      listEl.appendChild(a);
-    }
+    for (const o of longVideos) longEl.appendChild(buildOutlierCard(o));
+    for (const o of shortVideos) shortsEl.appendChild(buildOutlierCard(o));
   } catch (e) {
     listEl.innerHTML = `<p class="empty">Impossible de charger les outliers.<br>${e.message}</p>`;
   }
+}
+
+function buildSections() {
+  const frag = document.createDocumentFragment();
+  const longSection = document.createElement("div");
+  longSection.className = "list-section";
+  longSection.innerHTML = '<h3 class="list-heading">🎬 Vidéos longues</h3><div id="listLong"></div>';
+  const shortSection = document.createElement("div");
+  shortSection.className = "list-section";
+  shortSection.innerHTML = '<h3 class="list-heading">📱 Shorts</h3><div id="listShorts"></div>';
+  frag.appendChild(longSection);
+  frag.appendChild(shortSection);
+  return frag;
 }
 
 nicheSelect.addEventListener("change", () => {
@@ -200,7 +229,7 @@ async function loadFavorites() {
     const favorites = await api.getFavorites(favNicheSelect.value || undefined);
     if (!favorites.length) {
       favListEl.innerHTML =
-        '<p class="empty">⭐ Ta liste est vide.<br>Sur YouTube, ouvre le menu ⋮ d\'une vidéo (ou le cœur sur une miniature) → "Ajouter à la liste d\'outliers".</p>';
+        '<p class="empty">⭐ Ta liste est vide.<br>Sur YouTube, clique le cœur ♡ sur une miniature ou sur la page de lecture pour ajouter une vidéo.</p>';
       return;
     }
     const nicheById = Object.fromEntries(nichesCache.map((n) => [n.id, n.name]));

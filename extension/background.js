@@ -79,6 +79,8 @@ const METHODS = {
   getChannels: (niche) => store.listChannels(niche),
   addChannel: (channel, niche) => store.addChannel(channel, niche),
   deleteChannel: (id) => store.deleteChannel(id),
+  previewChannel: (channel) => store.previewChannel(channel),
+  createFlow: (ownChannel, niche, similarLinksText) => store.createFlow(ownChannel, niche, similarLinksText),
 
   getOutliers: (params) => store.listOutliers(params),
 

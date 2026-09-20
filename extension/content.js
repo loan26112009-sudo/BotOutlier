@@ -1,22 +1,30 @@
-// Injecté sur youtube.com. Ajoute :
-//  - un petit cœur sur chaque miniature vue en naviguant (accueil, recherche,
-//    recommandations...) et sur la page de lecture ;
-//  - un item "Ajouter à la liste d'outliers" dans le menu ⋮ natif de YouTube.
-// Un clic envoie la vidéo dans la liste d'outliers (stockée dans l'extension).
+// Injecté sur youtube.com. Ajoute un petit cœur sur chaque miniature vue en
+// naviguant (accueil, recherche, recommandations...) et sur la page de
+// lecture. Un clic envoie la vidéo dans la liste d'outliers (stockée dans
+// l'extension).
 //
 // Note : YouTube est une SPA avec un DOM interne qui change régulièrement, et
 // a migré une bonne partie de ses cartes vidéo vers de nouveaux composants
 // (yt-lockup-view-model) qui coexistent avec l'ancienne structure
 // (ytd-video-renderer). Les sélecteurs ci-dessous couvrent les deux, avec du
 // repli défensif — mais peuvent nécessiter une mise à jour si YouTube change
-// encore sa structure.
+// encore sa structure. Tout est protégé par des try/catch : une exception
+// ponctuelle ne doit jamais faire disparaître le cœur pour le reste de la
+// session.
 (function () {
   const PROCESSED_ATTR = "data-of-processed";
   const favoritedIds = new Set();
 
   const CARD_SELECTOR =
     "ytd-rich-item-renderer, ytd-video-renderer, ytd-compact-video-renderer, " +
-    "ytd-grid-video-renderer, ytd-playlist-video-renderer, yt-lockup-view-model";
+    "ytd-grid-video-renderer, ytd-playlist-video-renderer, yt-lockup-view-model, " +
+    "ytd-reel-item-renderer, ytm-shorts-lockup-view-model, ytd-shorts-lockup-view-model-v2";
+
+  // Cartes représentant une PLAYLIST entière (pas une vidéo précise) : on ne
+  // sait pas quelle vidéo ajouter, donc pas de cœur dessus.
+  const PLAYLIST_CARD_SELECTOR =
+    "ytd-playlist-renderer, ytd-compact-playlist-renderer, ytd-grid-playlist-renderer, " +
+    "ytd-radio-renderer, ytd-playlist-panel-renderer";
 
   function thumbUrl(videoId) {
     return `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
@@ -28,7 +36,11 @@
 
   function extractIdFromHref(href) {
     try {
-      return new URL(href, location.href).searchParams.get("v");
+      const u = new URL(href, location.href);
+      const fromQuery = u.searchParams.get("v");
+      if (fromQuery) return fromQuery;
+      const m = u.pathname.match(/\/shorts\/([\w-]{6,})/);
+      return m ? m[1] : null;
     } catch (e) {
       return null;
     }
@@ -71,7 +83,7 @@
   // précisément, sinon la carte entière en repli.
   function pickHeartAnchor(card, fallbackLink) {
     return (
-      card.querySelector('a#thumbnail[href*="/watch"]') ||
+      card.querySelector('a#thumbnail[href*="/watch"], a#thumbnail[href*="/shorts/"]') ||
       card.querySelector("yt-thumbnail-view-model") ||
       fallbackLink
     );
@@ -88,6 +100,22 @@
     chrome.runtime.sendMessage({ type: "CHECK_FAVORITES", ids }, (resp) => {
       onDone(resp && resp.ok ? resp.favorited : []);
     });
+  }
+
+  // "Mode recherche" (cœur sur les miniatures) et "mode spectateur" (cœur
+  // flottant sur la page de lecture) sont activables indépendamment depuis
+  // les réglages avancés de l'extension.
+  async function getModeSettings() {
+    try {
+      const data = await chrome.storage.local.get("of_db_v1");
+      const settings = (data.of_db_v1 && data.of_db_v1.settings) || {};
+      return {
+        searchMode: settings.heartSearchMode !== false,
+        viewerMode: settings.heartViewerMode !== false,
+      };
+    } catch (e) {
+      return { searchMode: true, viewerMode: true };
+    }
   }
 
   // --- Cœurs sur les miniatures (grilles, recherche, recommandations) ---
@@ -125,53 +153,75 @@
   // On ne s'appuie plus sur des id précis (#thumbnail, #video-title) : ce sont
   // exactement le genre de détails que YouTube change en premier lors d'une
   // refonte, et ça suffit à faire disparaître le cœur partout d'un coup. On
-  // prend TOUS les liens vers une vidéo, et on filtre ceux qui ressemblent à
-  // une carte (miniature ou titre), pas un lien perdu dans une description.
+  // prend TOUS les liens vers une vidéo (ou un Short), et on filtre ceux qui
+  // ressemblent à une carte (miniature ou titre), pas un lien perdu dans une
+  // description, et jamais une playlist entière (on ne sait pas quelle vidéo
+  // ajouter).
   function looksLikeVideoCard(link) {
     if (link.id === "thumbnail" || link.id === "video-title") return true;
     if (link.querySelector("img, yt-image, yt-thumbnail-view-model, yt-img-shadow")) return true;
     return !!link.closest(CARD_SELECTOR);
   }
 
-  function scanCards() {
-    const anchors = document.querySelectorAll('a[href*="/watch?v="]');
-    if (!anchors.length) return;
+  function isPlaylistTile(link, href) {
+    if (link.closest(PLAYLIST_CARD_SELECTOR)) return true;
+    // Une "Mix" (playlist auto-générée par YouTube) utilise list=RD... même
+    // sur un lien /watch? classique.
+    if (/[?&]list=RD/.test(href)) return true;
+    return false;
+  }
 
-    const newIds = [];
-    const seenCards = new Set();
+  async function scanCards() {
+    try {
+      const { searchMode } = await getModeSettings();
+      if (!searchMode) return;
 
-    anchors.forEach((link) => {
-      if (link.hasAttribute(PROCESSED_ATTR)) return;
-      link.setAttribute(PROCESSED_ATTR, "1");
+      const anchors = document.querySelectorAll('a[href*="/watch?v="], a[href*="/shorts/"]');
+      if (!anchors.length) return;
 
-      if (!looksLikeVideoCard(link)) return;
+      const newIds = [];
+      const seenCards = new Set();
 
-      const href = link.getAttribute("href");
-      const videoId = extractIdFromHref(href);
-      if (!videoId) return;
+      anchors.forEach((link) => {
+        try {
+          if (link.hasAttribute(PROCESSED_ATTR)) return;
+          link.setAttribute(PROCESSED_ATTR, "1");
 
-      const card = link.closest(CARD_SELECTOR) || link;
-      if (seenCards.has(card)) return;
-      seenCards.add(card);
+          const href = link.getAttribute("href");
+          if (isPlaylistTile(link, href)) return;
+          if (!looksLikeVideoCard(link)) return;
 
-      const meta = extractMetaFromCard(card, videoId, "grid", href);
-      const target = pickHeartAnchor(card, link);
-      if (getComputedStyle(target).position === "static") {
-        target.style.position = "relative";
-      }
-      target.appendChild(makeHeartButton(videoId, meta));
-      newIds.push(videoId);
-    });
+          const videoId = extractIdFromHref(href);
+          if (!videoId) return;
 
-    checkFavorites(newIds, (ids) => {
-      ids.forEach((id) => favoritedIds.add(id));
-      document.querySelectorAll(".of-heart-btn").forEach((btn) => {
-        if (favoritedIds.has(btn.dataset.videoId)) {
-          btn.classList.add("of-active");
-          btn.textContent = "♥";
+          const card = link.closest(CARD_SELECTOR) || link;
+          if (seenCards.has(card)) return;
+          seenCards.add(card);
+
+          const meta = extractMetaFromCard(card, videoId, "grid", href);
+          const target = pickHeartAnchor(card, link);
+          if (getComputedStyle(target).position === "static") {
+            target.style.position = "relative";
+          }
+          target.appendChild(makeHeartButton(videoId, meta));
+          newIds.push(videoId);
+        } catch (err) {
+          // une carte cassée ne doit jamais empêcher les suivantes
         }
       });
-    });
+
+      checkFavorites(newIds, (ids) => {
+        ids.forEach((id) => favoritedIds.add(id));
+        document.querySelectorAll(".of-heart-btn").forEach((btn) => {
+          if (favoritedIds.has(btn.dataset.videoId)) {
+            btn.classList.add("of-active");
+            btn.textContent = "♥";
+          }
+        });
+      });
+    } catch (err) {
+      // ne jamais casser la navigation YouTube pour ça
+    }
   }
 
   // --- Cœur flottant sur la page de lecture ---
@@ -185,176 +235,69 @@
     }
   }
 
-  function injectWatchHeart() {
-    removeFloatingHeart();
-    if (!location.pathname.startsWith("/watch")) return;
+  async function injectWatchHeart() {
+    try {
+      removeFloatingHeart();
+      if (!location.pathname.startsWith("/watch") && !location.pathname.startsWith("/shorts/")) return;
 
-    const videoId = new URLSearchParams(location.search).get("v");
-    if (!videoId) return;
+      const { viewerMode } = await getModeSettings();
+      if (!viewerMode) return;
 
-    const meta = {
-      youtube_video_id: videoId,
-      title: document.title.replace(/ - YouTube$/, "") || null,
-      channel_title: null,
-      thumbnail_url: thumbUrl(videoId),
-      url: videoUrl(videoId),
-      source_page: "watch",
-    };
+      const videoId = new URLSearchParams(location.search).get("v") || extractIdFromHref(location.pathname);
+      if (!videoId) return;
 
-    function refreshWatchMeta() {
-      const titleEl = document.querySelector(
-        "h1.ytd-watch-metadata yt-formatted-string, h1.title yt-formatted-string, h1.ytd-watch-metadata"
-      );
-      if (titleEl && titleEl.textContent.trim()) meta.title = titleEl.textContent.trim();
-      const channelEl = document.querySelector(
-        "ytd-channel-name#channel-name a, #owner ytd-channel-name a, #channel-name a"
-      );
-      if (channelEl && channelEl.textContent.trim()) meta.channel_title = channelEl.textContent.trim();
-    }
-    refreshWatchMeta();
-    setTimeout(refreshWatchMeta, 1000);
+      const meta = {
+        youtube_video_id: videoId,
+        title: document.title.replace(/ - YouTube$/, "") || null,
+        channel_title: null,
+        thumbnail_url: thumbUrl(videoId),
+        url: videoUrl(videoId),
+        source_page: "watch",
+      };
 
-    floatingBtn = document.createElement("button");
-    floatingBtn.className = "of-floating-heart";
-    floatingBtn.type = "button";
-    floatingBtn.title = "Ajouter cette vidéo à la liste d'outliers";
-    floatingBtn.textContent = "♡";
-
-    checkFavorites([videoId], (ids) => {
-      if (ids.includes(videoId)) {
-        floatingBtn.classList.add("of-active");
-        floatingBtn.textContent = "♥";
+      function refreshWatchMeta() {
+        const titleEl = document.querySelector(
+          "h1.ytd-watch-metadata yt-formatted-string, h1.title yt-formatted-string, h1.ytd-watch-metadata"
+        );
+        if (titleEl && titleEl.textContent.trim()) meta.title = titleEl.textContent.trim();
+        const channelEl = document.querySelector(
+          "ytd-channel-name#channel-name a, #owner ytd-channel-name a, #channel-name a"
+        );
+        if (channelEl && channelEl.textContent.trim()) meta.channel_title = channelEl.textContent.trim();
       }
-    });
+      refreshWatchMeta();
+      setTimeout(refreshWatchMeta, 1000);
 
-    floatingBtn.addEventListener("click", () => {
-      const willFavorite = !floatingBtn.classList.contains("of-active");
-      floatingBtn.classList.toggle("of-active", willFavorite);
-      floatingBtn.textContent = willFavorite ? "♥" : "♡";
-      floatingBtn.classList.add("of-loading");
-      sendToggle(willFavorite, meta, (resp) => {
-        floatingBtn.classList.remove("of-loading");
-        if (!resp) {
-          floatingBtn.classList.toggle("of-active", !willFavorite);
-          floatingBtn.textContent = !willFavorite ? "♥" : "♡";
+      floatingBtn = document.createElement("button");
+      floatingBtn.className = "of-floating-heart";
+      floatingBtn.type = "button";
+      floatingBtn.title = "Ajouter cette vidéo à la liste d'outliers";
+      floatingBtn.textContent = "♡";
+
+      checkFavorites([videoId], (ids) => {
+        if (ids.includes(videoId)) {
+          floatingBtn.classList.add("of-active");
+          floatingBtn.textContent = "♥";
         }
       });
-    });
 
-    document.body.appendChild(floatingBtn);
-  }
-
-  // --- Item "Ajouter à la liste d'outliers" dans le menu ⋮ natif ---
-  // Expérimental : le popup de menu de YouTube est l'une des parties les
-  // plus instables de son DOM. Le tout est protégé par des try/catch pour
-  // qu'une éventuelle casse ne perturbe jamais le reste (cœurs compris).
-
-  let pendingMenuContext = null;
-
-  function captureMenuContext(e) {
-    try {
-      const trigger = e.target.closest(
-        "ytd-menu-renderer button, ytd-menu-renderer yt-icon-button, " +
-          "yt-icon-button.dropdown-trigger, tp-yt-paper-icon-button"
-      );
-      if (!trigger) return;
-
-      const label = (trigger.getAttribute("aria-label") || trigger.getAttribute("title") || "").toLowerCase();
-      const withinMenuRenderer = !!trigger.closest("ytd-menu-renderer");
-      const looksLikeMoreMenu =
-        withinMenuRenderer ||
-        label.includes("plus d'options") ||
-        label.includes("more actions") ||
-        label.includes("more options");
-      if (!looksLikeMoreMenu) return;
-
-      const card =
-        trigger.closest(CARD_SELECTOR) ||
-        (location.pathname.startsWith("/watch") ? document.querySelector("ytd-watch-metadata") : null);
-      if (!card) return;
-
-      let videoId;
-      let meta;
-      if (card.tagName === "YTD-WATCH-METADATA") {
-        videoId = new URLSearchParams(location.search).get("v");
-        meta = {
-          youtube_video_id: videoId,
-          title: document.title.replace(/ - YouTube$/, "") || null,
-          channel_title: extractChannelFromCard(document.body, null),
-          thumbnail_url: videoId ? thumbUrl(videoId) : null,
-          url: videoId ? videoUrl(videoId) : null,
-          source_page: "menu",
-        };
-      } else {
-        const link = card.querySelector('a#thumbnail[href*="/watch"], a#video-title[href*="/watch"]');
-        const href = link ? link.getAttribute("href") : null;
-        videoId = href ? extractIdFromHref(href) : null;
-        meta = videoId ? extractMetaFromCard(card, videoId, "menu", href) : null;
-      }
-      if (!videoId || !meta) return;
-
-      pendingMenuContext = { videoId, meta, ts: Date.now() };
-    } catch (err) {
-      // silencieux : on ne casse jamais la navigation YouTube pour ça
-    }
-  }
-  document.addEventListener("pointerdown", captureMenuContext, true);
-
-  function buildOutlierMenuItem(template, ctx) {
-    const item = template.cloneNode(true);
-    item.removeAttribute(PROCESSED_ATTR);
-    item.classList.add("of-menu-item");
-
-    const label = item.querySelector("yt-formatted-string, .yt-simple-endpoint-text, span");
-    const icon = item.querySelector("yt-icon");
-    if (icon) {
-      icon.innerHTML =
-        '<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12 3l2.6 5.9 6.4.6-4.8 4.3 1.4 6.3L12 16.9 6.4 20.1l1.4-6.3-4.8-4.3 6.4-.6z"/></svg>';
-    }
-
-    let active = false;
-    const updateLabel = () => {
-      if (label) label.textContent = active ? "Retirer de la liste d'outliers" : "Ajouter à la liste d'outliers";
-    };
-    updateLabel();
-    checkFavorites([ctx.videoId], (ids) => {
-      active = ids.includes(ctx.videoId);
-      updateLabel();
-    });
-
-    item.addEventListener(
-      "click",
-      (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        active = !active;
-        updateLabel();
-        sendToggle(active, ctx.meta, (resp) => {
+      floatingBtn.addEventListener("click", () => {
+        const willFavorite = !floatingBtn.classList.contains("of-active");
+        floatingBtn.classList.toggle("of-active", willFavorite);
+        floatingBtn.textContent = willFavorite ? "♥" : "♡";
+        floatingBtn.classList.add("of-loading");
+        sendToggle(willFavorite, meta, (resp) => {
+          floatingBtn.classList.remove("of-loading");
           if (!resp) {
-            active = !active;
-            updateLabel();
+            floatingBtn.classList.toggle("of-active", !willFavorite);
+            floatingBtn.textContent = !willFavorite ? "♥" : "♡";
           }
         });
-      },
-      true
-    );
+      });
 
-    return item;
-  }
-
-  function tryInjectMenuItem(popup) {
-    try {
-      if (!pendingMenuContext || Date.now() - pendingMenuContext.ts > 4000) return;
-      if (popup.querySelector(".of-menu-item")) return;
-
-      const items = popup.querySelectorAll("ytd-menu-service-item-renderer, tp-yt-paper-item");
-      if (!items.length) return;
-
-      const template = items[items.length - 1];
-      const custom = buildOutlierMenuItem(template, pendingMenuContext);
-      template.parentElement.appendChild(custom);
+      document.body.appendChild(floatingBtn);
     } catch (err) {
-      // idem : ne jamais faire remonter d'erreur depuis ce code expérimental
+      // idem : ne jamais casser la navigation YouTube pour ça
     }
   }
 
@@ -363,22 +306,12 @@
   let scanTimeout = null;
   function scheduleScan() {
     clearTimeout(scanTimeout);
-    scanTimeout = setTimeout(scanCards, 400);
+    scanTimeout = setTimeout(() => {
+      scanCards();
+    }, 400);
   }
 
-  const observer = new MutationObserver((mutations) => {
-    scheduleScan();
-    for (const m of mutations) {
-      m.addedNodes.forEach((node) => {
-        if (node.nodeType !== 1) return;
-        const popup =
-          node.matches && node.matches("tp-yt-iron-dropdown, ytd-menu-popup-renderer")
-            ? node
-            : node.querySelector && node.querySelector("tp-yt-iron-dropdown, ytd-menu-popup-renderer");
-        if (popup) setTimeout(() => tryInjectMenuItem(popup), 50);
-      });
-    }
-  });
+  const observer = new MutationObserver(() => scheduleScan());
   observer.observe(document.documentElement, { childList: true, subtree: true });
 
   // YouTube ne recharge pas la page en navigation interne (SPA) : cet événement

@@ -3,8 +3,10 @@
 // dans son profil Chrome — aucun serveur à lancer.
 (function (root) {
   const DB_KEY = "of_db_v1";
-  const DEFAULT_NICHES = ["Divertissement", "Gaming", "GTA", "Fortnite", "Cinéma", "Mac"];
   const SNAPSHOT_RETENTION_DAYS = 30;
+  // Une vidéo de moins de 3 min est traitée comme un Short (seuil officiel
+  // YouTube depuis 2024, plus large que l'ancienne limite de 60s).
+  const SHORT_MAX_SECONDS = 180;
 
   function nowIso() {
     return new Date().toISOString();
@@ -19,6 +21,11 @@
         minHistoryVideos: 5,
         maxVideosPerChannel: 30,
         refreshIntervalHours: 2,
+        // "Mode recherche" (cœur sur les miniatures en naviguant) et "mode
+        // spectateur" (cœur flottant sur la page de lecture), activables
+        // indépendamment depuis les réglages.
+        heartSearchMode: true,
+        heartViewerMode: true,
       },
       niches: [],
       channels: [],
@@ -41,10 +48,10 @@
       const data = await storageArea.get(DB_KEY);
       let db = data[DB_KEY];
       if (!db) {
+        // Pas de niches pré-créées : la liste ne contient que ce que la
+        // personne crée elle-même, pour éviter la confusion "j'ai 6 niches
+        // alors que je n'ai rien fait".
         db = emptyDb();
-        for (const name of DEFAULT_NICHES) {
-          db.niches.push({ id: db.seq.niches++, name, createdAt: nowIso() });
-        }
         await storageArea.set({ [DB_KEY]: db });
       }
       return db;
@@ -332,6 +339,81 @@
       return toDiscovered(db, await client.getChannels(apiKey, ids));
     }
 
+    // Aperçu d'une chaîne sans rien enregistrer : permet d'afficher "c'est
+    // bien cette chaîne-là ?" avant de l'ajouter pour de vrai, pour éviter
+    // les ajouts hasardeux quand la personne tape juste un nom approximatif.
+    async function previewChannel(channelRef) {
+      if (!(channelRef || "").trim()) return null;
+      const db = await read();
+      const apiKey = requireApiKey(db);
+      const resolved = await client.resolveChannel(apiKey, channelRef);
+      if (!resolved) return null;
+      return {
+        youtubeChannelId: resolved.youtubeChannelId,
+        title: resolved.title,
+        thumbnailUrl: resolved.thumbnailUrl,
+        subscriberCount: resolved.subscriberCount,
+      };
+    }
+
+    // Flux "1 clic" : ajoute la chaîne perso (si donnée) et les liens
+    // similaires (si donnés), puis complète TOUJOURS avec une découverte
+    // automatique basée sur la description de niche — la personne n'a donc
+    // besoin de décrire que sa niche pour obtenir un flux garni.
+    async function createFlow(ownChannelRef, nicheName, similarLinksText) {
+      nicheName = (nicheName || "").trim();
+      if (!nicheName) throw new Error("Décris ta niche pour commencer.");
+
+      const db0 = await read();
+      const apiKey = requireApiKey(db0);
+
+      const added = [];
+      const errors = [];
+
+      if ((ownChannelRef || "").trim()) {
+        try {
+          const channel = await addChannel(ownChannelRef, nicheName);
+          added.push(channel.youtubeChannelId);
+        } catch (e) {
+          errors.push(`ta chaîne : ${e.message}`);
+        }
+      }
+
+      const links = (similarLinksText || "")
+        .split(/[\n,]/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+      for (const link of links) {
+        try {
+          const channel = await addChannel(link, nicheName);
+          added.push(channel.youtubeChannelId);
+        } catch (e) {
+          errors.push(`${link} : ${e.message}`);
+        }
+      }
+
+      let discoveredCount = 0;
+      try {
+        const results = await discoverByQuery(nicheName, 10);
+        const toAdd = results.filter((r) => !r.alreadyTracked && !added.includes(r.youtubeChannelId)).slice(0, 8);
+        if (toAdd.length) {
+          const resolvedList = await client.getChannels(apiKey, toAdd.map((r) => r.youtubeChannelId));
+          const db = await read();
+          const niche = getOrCreateNiche(db, nicheName);
+          for (const resolved of resolvedList) {
+            upsertChannel(db, resolved, niche.id);
+            added.push(resolved.youtubeChannelId);
+            discoveredCount++;
+          }
+          await write(db);
+        }
+      } catch (e) {
+        errors.push(`découverte automatique : ${e.message}`);
+      }
+
+      return { added: [...new Set(added)], errors, discoveredCount, niche: nicheName };
+    }
+
     async function addBulk(nicheName, channelIds) {
       const db0 = await read();
       const apiKey = requireApiKey(db0);
@@ -418,6 +500,8 @@
           viewCount: data.viewCount,
           likeCount: data.likeCount,
           commentCount: data.commentCount,
+          durationSeconds: data.durationSeconds,
+          isShort: data.durationSeconds != null && data.durationSeconds <= SHORT_MAX_SECONDS,
           baselineViews: data.baselineViews,
           outlierScore: data.outlierScore,
           isOutlier: data.isOutlier,
@@ -501,7 +585,7 @@
 
     return {
       listNiches, createNiche, deleteNiche,
-      listChannels, addChannel, deleteChannel,
+      listChannels, addChannel, deleteChannel, previewChannel, createFlow,
       listOutliers,
       listFavorites, addFavorite, removeFavorite, updateFavorite, checkFavorites,
       discoverSimilar, discoverByQuery, addBulk,
@@ -511,7 +595,7 @@
     };
   }
 
-  const Store = { makeStore, emptyDb, DEFAULT_NICHES, SNAPSHOT_RETENTION_DAYS };
+  const Store = { makeStore, emptyDb, SNAPSHOT_RETENTION_DAYS };
   if (typeof module !== "undefined" && module.exports) module.exports = Store;
   else root.Store = Store;
 })(typeof self !== "undefined" ? self : this);

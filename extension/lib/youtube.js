@@ -32,6 +32,17 @@
     return (t.medium || t.default || {}).url || null;
   }
 
+  // "PT4M13S" -> 253 (secondes). Renvoie null si la durée est absente/invalide.
+  function parseIso8601Duration(duration) {
+    if (!duration) return null;
+    const m = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/.exec(duration);
+    if (!m) return null;
+    const hours = parseInt(m[1] || "0", 10);
+    const minutes = parseInt(m[2] || "0", 10);
+    const seconds = parseInt(m[3] || "0", 10);
+    return hours * 3600 + minutes * 60 + seconds;
+  }
+
   function makeClient(fetchImpl) {
     const doFetch = fetchImpl || (typeof fetch !== "undefined" ? fetch : null);
     if (!doFetch) throw new Error("Aucune implémentation fetch disponible");
@@ -128,10 +139,15 @@
       const out = [];
       for (const batch of chunk(ids)) {
         if (!batch.length) continue;
-        const data = await apiGet("/videos", { part: "snippet,statistics", id: batch.join(","), maxResults: 50 }, apiKey);
+        const data = await apiGet(
+          "/videos",
+          { part: "snippet,statistics,contentDetails", id: batch.join(","), maxResults: 50 },
+          apiKey
+        );
         for (const item of data.items || []) {
           const snippet = item.snippet || {};
           const stats = item.statistics || {};
+          const content = item.contentDetails || {};
           out.push({
             youtubeVideoId: item.id,
             title: snippet.title || null,
@@ -140,6 +156,7 @@
             viewCount: parseInt(stats.viewCount || "0", 10),
             likeCount: stats.likeCount ? parseInt(stats.likeCount, 10) : 0,
             commentCount: stats.commentCount ? parseInt(stats.commentCount, 10) : 0,
+            durationSeconds: parseIso8601Duration(content.duration),
           });
         }
       }

@@ -68,12 +68,3 @@
 .of-floating-heart.of-loading {
   opacity: 0.7;
 }
-
-/* Item injecté dans le menu ⋮ natif de YouTube — hérite du style natif via le
-   clonage d'un item existant ; on ajuste juste la couleur de l'icône. */
-.of-menu-item {
-  cursor: pointer;
-}
-.of-menu-item svg {
-  color: #8b5cf6;
-}
