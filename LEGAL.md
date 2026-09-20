@@ -32,8 +32,8 @@ et comment le code les respecte :
 
 | Règle | Ce que dit YouTube | Comment le bot s'y conforme |
 |---|---|---|
-| **Accès aux données** | Uniquement via les moyens décrits dans l'accord (API officielle), pas de scraping non autorisé | Tous les appels passent par `googleapis.com/youtube/v3` (`backend/app/youtube_client.py`). Le content script sur YouTube lit uniquement le titre/la chaîne de ce que **tu es déjà en train de regarder dans ton propre navigateur** — comme le ferait n'importe quelle extension (ad-blocker, note-taking...), pas un robot d'indexation. |
-| **Rétention des données non authentifiées** | Pas plus de 30 jours sans rafraîchissement (section III.E.4.d) | Les stats vidéo sont rafraîchies toutes les 2h (`REFRESH_INTERVAL_HOURS`) — largement sous la limite. L'historique de vues (`VideoSnapshot`) est purgé automatiquement au-delà de 30 jours (`purge_old_snapshots` dans `backend/app/refresh.py`). Les métadonnées de chaîne (titre, abonnés) sont elles aussi rafraîchies à chaque cycle, jamais figées. |
+| **Accès aux données** | Uniquement via les moyens décrits dans l'accord (API officielle), pas de scraping non autorisé | Tous les appels passent par `googleapis.com/youtube/v3` (`extension/lib/youtube.js`). Le content script sur YouTube lit uniquement le titre/la chaîne de ce que **tu es déjà en train de regarder dans ton propre navigateur** — comme le ferait n'importe quelle extension (ad-blocker, note-taking...), pas un robot d'indexation. |
+| **Rétention des données non authentifiées** | Pas plus de 30 jours sans rafraîchissement (section III.E.4.d) | Les stats vidéo sont rafraîchies toutes les 2h par défaut (réglable). L'historique de vues est purgé automatiquement au-delà de 30 jours (`SNAPSHOT_RETENTION_DAYS` dans `extension/lib/store.js`). Les métadonnées de chaîne (titre, abonnés) sont elles aussi rafraîchies à chaque cycle, jamais figées. |
 | **Ne pas remplacer les chiffres de l'API** | Le nombre de vues affiché doit être celui renvoyé par l'API, non substitué (section III.E.4.h) | Le popup affiche toujours `view_count` tel que renvoyé par l'API. Le "score d'outlier" (`x4.2`) est un **indicateur calculé en plus**, jamais un remplacement du vrai compteur de vues. |
 | **Attribution** | Indiquer clairement que YouTube est la source des données affichées (section III.F.2.a) | Mention "Données fournies par l'API YouTube Data v3 — non affilié à YouTube/Google" en pied de page du popup et des réglages de l'extension. |
 | **Politique de confidentialité** | Publier une politique claire sur la collecte/le stockage des données | Voir [`PRIVACY.md`](./PRIVACY.md). |
@@ -49,10 +49,11 @@ officielles pour l'usage du logo/nom YouTube.
 
 ## 5. Quotas et usage raisonnable
 
-La clé `YOUTUBE_API_KEY` est **la tienne** : c'est toi qui es responsable de
-son usage vis-à-vis de Google (quotas, conditions d'utilisation de la
-Console Cloud). Le bot est conçu pour rester très en dessous du quota
-gratuit (10 000 unités/jour) — voir le détail dans le `README.md`.
+Ta clé API YouTube est **la tienne** : c'est toi qui es responsable de son
+usage vis-à-vis de Google (quotas, conditions d'utilisation de la Console
+Cloud). Chaque personne qui installe l'extension configure sa propre clé —
+il n'y a pas de clé partagée. Le bot est conçu pour rester très en dessous
+du quota gratuit (10 000 unités/jour) — voir le détail dans le `README.md`.
 
 ## 6. Si tu veux déployer ce projet pour d'autres personnes
 

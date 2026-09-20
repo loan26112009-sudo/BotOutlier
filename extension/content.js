@@ -2,7 +2,7 @@
 //  - un petit cœur sur chaque miniature vue en naviguant (accueil, recherche,
 //    recommandations...) et sur la page de lecture ;
 //  - un item "Ajouter à la liste d'outliers" dans le menu ⋮ natif de YouTube.
-// Un clic envoie la vidéo dans la liste d'outliers côté backend.
+// Un clic envoie la vidéo dans la liste d'outliers (stockée dans l'extension).
 //
 // Note : YouTube est une SPA avec un DOM interne qui change régulièrement, et
 // a migré une bonne partie de ses cartes vidéo vers de nouveaux composants

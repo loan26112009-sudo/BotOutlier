@@ -16,6 +16,7 @@ document.getElementById("openOptions").addEventListener("click", (e) => {
   chrome.runtime.openOptionsPage();
 });
 settingsBtn.addEventListener("click", () => chrome.runtime.openOptionsPage());
+document.getElementById("openOptionsFromPanel").addEventListener("click", () => chrome.runtime.openOptionsPage());
 
 function formatViews(n) {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
@@ -34,42 +35,39 @@ function setStatus(mode, text) {
   statusText.textContent = text;
 }
 
-let backendReachable = false;
-function setBackendReachable(reachable) {
-  const wasReachable = backendReachable;
-  backendReachable = reachable;
-  document.getElementById("offlinePanel").classList.toggle("hidden", reachable);
-  document.getElementById("tabsNav").classList.toggle("hidden", !reachable);
-  document.getElementById("autoTab").classList.toggle("hidden", !reachable || currentTab !== "auto");
-  document.getElementById("favoritesTab").classList.toggle("hidden", !reachable || currentTab !== "favorites");
-  if (reachable && !wasReachable) {
+// Plus de serveur à attendre : le seul vrai prérequis est la clé API
+// YouTube, réglable directement dans l'extension. On vérifie quand même
+// périodiquement (utile si le popup était déjà ouvert pendant que la clé
+// vient d'être ajoutée dans un autre onglet des réglages).
+let apiKeyConfigured = false;
+function setApiKeyConfigured(configured) {
+  const was = apiKeyConfigured;
+  apiKeyConfigured = configured;
+  document.getElementById("offlinePanel").classList.toggle("hidden", configured);
+  document.getElementById("tabsNav").classList.toggle("hidden", !configured);
+  document.getElementById("autoTab").classList.toggle("hidden", !configured || currentTab !== "auto");
+  document.getElementById("favoritesTab").classList.toggle("hidden", !configured || currentTab !== "favorites");
+  if (configured && !was) {
     loadNiches();
     loadOutliers();
   }
 }
 
 let watcherInterval = null;
-function startBackendWatcher() {
+function startApiKeyWatcher() {
   clearInterval(watcherInterval);
-  watcherInterval = setInterval(async () => {
-    try {
-      await api.getStatus();
-      setBackendReachable(true);
-      loadStatus();
-    } catch (e) {
-      setBackendReachable(false);
-    }
-  }, 4000);
+  watcherInterval = setInterval(loadStatus, 5000);
 }
 
 async function loadStatus() {
   try {
     const s = await api.getStatus();
-    setBackendReachable(true);
     if (!s.youtube_api_key_configured) {
-      setStatus("warn", "Il manque juste la clé API côté serveur — voir les réglages");
+      setApiKeyConfigured(false);
+      setStatus("warn", "Il manque juste ta clé API YouTube — voir les réglages");
       return;
     }
+    setApiKeyConfigured(true);
     const parts = [`${s.tracked_channels} chaînes`, `${s.tracked_niches} niches`];
     if (s.refresh_in_progress) {
       parts.push("scan en cours…");
@@ -79,8 +77,7 @@ async function loadStatus() {
     }
     setStatus("ok", parts.join(" · "));
   } catch (e) {
-    setStatus("err", "Ton serveur dort encore");
-    setBackendReachable(false);
+    setStatus("err", `Erreur : ${e.message}`);
   }
 }
 
@@ -106,7 +103,7 @@ async function loadNiches() {
       favNicheSelect.appendChild(opt);
     }
   } catch (e) {
-    // le backend n'est peut-être pas encore lancé
+    // clé API pas encore configurée, ou service worker qui se réveille
   }
 }
 
@@ -294,6 +291,6 @@ document.querySelectorAll(".tab-btn").forEach((btn) => {
 (async function init() {
   await loadNiches();
   await loadStatus();
-  startBackendWatcher();
+  startApiKeyWatcher();
   await loadOutliers();
 })();

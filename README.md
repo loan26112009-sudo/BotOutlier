@@ -3,10 +3,11 @@
 Détecte automatiquement les vidéos YouTube qui **surperforment** par rapport
 aux habitudes de leur propre chaîne (les "outliers"), triées par niche
 (Divertissement, Gaming, GTA, Fortnite, Cinéma, Mac, ou toute niche que tu
-crées). Le tout consultable depuis une **extension Chrome**.
+crées). Tout tourne dans une **extension Chrome** — pas de serveur à
+installer ni à lancer.
 
 > 👉 Pressé de t'en servir ? Va droit au [**tuto d'utilisation pas à pas**](./TUTORIAL.md)
-> (installation → premiers outliers → usage quotidien, ~15 min). Ce README-ci
+> (installation → premiers outliers → usage quotidien, ~10 min). Ce README-ci
 > est la référence technique.
 
 **© 2026 Loan — Tous droits réservés.** Projet non affilié, non sponsorisé
@@ -18,76 +19,44 @@ officielle YouTube Data v3 avec ta propre clé API. Voir [`LICENSE`](./LICENSE),
 ## Comment ça marche
 
 ```
-┌─────────────────────┐        toutes les 2h        ┌──────────────────┐
-│   YouTube Data API   │◄─────────────────────────────│  Backend Python   │
-│  (chaînes, vidéos)    │────────────────────────────► │  FastAPI + SQLite │
-└─────────────────────┘        stats des vidéos       └─────────┬────────┘
-                                                                  │ API REST
-                                                                  ▼
-                                                        ┌──────────────────┐
-                                                        │ Extension Chrome  │
-                                                        │ (popup + options)  │
-                                                        └──────────────────┘
+┌──────────────────────┐   toutes les 2h (alarme Chrome)   ┌────────────────────────┐
+│   YouTube Data API    │◄──────────────────────────────────│  Extension Chrome        │
+│  (chaînes, vidéos)     │────────────────────────────────► │  (service worker +       │
+└──────────────────────┘        stats des vidéos            │   chrome.storage.local)  │
+                                                              └───────────┬────────────┘
+                                                                          │
+                                                                          ▼
+                                                              ┌────────────────────────┐
+                                                              │ Popup + réglages         │
+                                                              │ + cœur sur youtube.com   │
+                                                              └────────────────────────┘
 ```
 
-- **Le backend** (`backend/`) tourne en continu. Toutes les `REFRESH_INTERVAL_HOURS`
-  (2h par défaut), il repasse sur chaque chaîne suivie, récupère ses vidéos
-  récentes et calcule pour chacune un **score d'outlier** :
+- **Le service worker de l'extension** (`background.js`) tourne en tâche de
+  fond dans Chrome. Toutes les `refreshIntervalHours` (2h par défaut, réglable),
+  une alarme le réveille : il repasse sur chaque chaîne suivie, récupère ses
+  vidéos récentes et calcule pour chacune un **score d'outlier** :
   `score = vues de la vidéo / médiane des vues des autres vidéos récentes de la chaîne`.
-  Une vidéo est marquée outlier si `score >= OUTLIER_MULTIPLIER` (x3 par défaut)
-  et si elle dépasse un plancher de vues absolu (`MIN_VIEWS_FLOOR`, pour ignorer
-  le bruit sur les micro-chaînes).
-- **L'extension Chrome** (`extension/`) parle à ce backend en local : elle
-  affiche les outliers par niche, permet d'ajouter des chaînes (par URL, @handle
-  ou nom), de créer des niches, et de **découvrir** des chaînes similaires à une
-  chaîne donnée ou par mot-clé de niche.
+  Une vidéo est marquée outlier si le score dépasse le seuil (x3 par défaut)
+  et un plancher de vues absolu (pour ignorer le bruit sur les micro-chaînes).
+- **Tout est stocké dans `chrome.storage.local`** — le stockage propre à
+  l'extension, dans ton profil Chrome. Aucun serveur, aucune base de données
+  à héberger, rien à lancer dans un terminal.
+- **Le popup** affiche les outliers par niche, permet d'ajouter des chaînes
+  (par URL, @handle ou nom), de créer des niches, et de **découvrir** des
+  chaînes similaires à une chaîne donnée ou par mot-clé de niche.
 - Un badge + une notification Chrome préviennent quand un **nouvel outlier**
-  vient d'être détecté.
+  vient d'être détecté (vérification toutes les 15 min).
 - En te baladant sur YouTube, un **petit cœur ♡** apparaît sur chaque miniature
-  (et sur la page de lecture) : un clic l'ajoute à l'onglet **"Liste d'outliers"** de
-  l'extension, sauvegardé en base côté backend (persistant, pas juste dans le
-  navigateur).
+  (et sur la page de lecture), plus une option **"Ajouter à la liste
+  d'outliers"** dans le menu ⋮ natif de chaque vidéo : un clic l'ajoute à
+  l'onglet **"⭐ Ma liste"** du popup, sauvegardé dans `chrome.storage.local`
+  (persistant, survit à la fermeture du navigateur).
+- **Bonus** : une étoile apparaît au survol de chaque chaîne dans ton menu
+  latéral d'abonnements YouTube — cliquer dessus l'épingle en haut de la
+  liste (préférence locale, indépendante du reste).
 
-## 1. Lancer le backend
-
-Prérequis : Python 3.11+.
-
-```bash
-cd backend
-python3 -m venv venv
-source venv/bin/activate          # Windows : venv\Scripts\activate
-pip install -r requirements.txt
-
-cp .env.example .env
-```
-
-Ouvre `backend/.env` et renseigne `YOUTUBE_API_KEY` (voir section suivante).
-Tu peux aussi ajuster `OUTLIER_MULTIPLIER`, `MIN_VIEWS_FLOOR`,
-`REFRESH_INTERVAL_HOURS`, etc.
-
-```bash
-uvicorn app.main:app --reload
-```
-
-Le serveur tourne sur `http://127.0.0.1:8000`. Au démarrage, il crée
-automatiquement 6 niches par défaut : *Divertissement, Gaming, GTA, Fortnite,
-Cinéma, Mac*. Documentation interactive de l'API : `http://127.0.0.1:8000/docs`.
-
-### Obtenir une clé YouTube Data API v3 (gratuite)
-
-1. Va sur [console.cloud.google.com](https://console.cloud.google.com/), crée
-   un projet (ou réutilise un existant).
-2. Dans "API et services" → "Bibliothèque", active **YouTube Data API v3**.
-3. Dans "API et services" → "Identifiants", crée une **clé API**.
-4. Colle-la dans `backend/.env` (`YOUTUBE_API_KEY=...`).
-
-Le quota gratuit est de 10 000 unités/jour. Le rafraîchissement automatique
-n'utilise que des appels à 1 unité (très large marge même avec des centaines
-de chaînes suivies). Seules les fonctions de **découverte** de chaînes
-(recherche par mot-clé ou par chaîne similaire) coûtent 100 unités/appel —
-utilise-les ponctuellement, pas en boucle.
-
-## 2. Installer l'extension dans Chrome
+## 1. Installer l'extension dans Chrome
 
 ### Option A — Mode développeur (le plus rapide, pour un usage perso)
 
@@ -102,18 +71,10 @@ immédiate, et c'est ce que font la plupart des devs pour leurs propres outils.
    le 📌 pour la garder visible).
 5. Clique dessus → l'engrenage ⚙ (ou clic droit sur l'icône → Options) pour
    ouvrir la page de réglages.
-6. Vérifie l'URL du backend (`http://127.0.0.1:8000` par défaut) et clique
-   "Enregistrer" — le badge doit passer sur "connecté ✓".
 
 > ⚠️ En mode développeur, Chrome désactive parfois l'extension après un
 > redémarrage du navigateur ("mode développeur activé" en bandeau) — c'est
 > normal et sans danger, il suffit de la réactiver sur `chrome://extensions`.
-
-L'extension est configurée pour parler à `localhost`/`127.0.0.1` : elle ne
-fonctionne que **sur la machine où tourne le backend**. Si tu déploies le
-backend ailleurs (serveur distant, Docker sur un autre host), ajoute son
-origine dans `host_permissions` de `extension/manifest.json` et dans
-`CORS_ORIGINS` de `backend/.env`, puis recharge l'extension.
 
 ### Option B — Publier sur le Chrome Web Store (pour la partager avec d'autres)
 
@@ -126,44 +87,51 @@ développeur"), il faut la publier sur le Web Store :
 2. Zippe le contenu du dossier `extension/` (le zip doit contenir `manifest.json`
    à sa racine, pas un sous-dossier).
 3. Dans le Dashboard, "Nouvel article" → upload le zip.
-4. Renseigne la fiche (description, catégorie, captures d'écran, **politique de
-   confidentialité** — obligatoire car l'extension fait des requêtes réseau
-   vers ton backend).
+4. Renseigne la fiche avec [`STORE_LISTING.md`](./STORE_LISTING.md) (résumé,
+   description, catégorie) + une **politique de confidentialité** — tu peux
+   réutiliser [`PRIVACY.md`](./PRIVACY.md).
 5. Soumets pour revue (Google met généralement quelques jours).
 
-**Point important avant de publier publiquement** : par défaut, l'extension
-parle à un backend `localhost` — donc seul toi (qui fais tourner le backend en
-local) peux réellement l'utiliser, même si quelqu'un d'autre l'installe. Pour
-que d'autres personnes en profitent sans rien installer côté serveur, il faut
-d'abord **déployer le backend sur un serveur accessible publiquement** (le
-`Dockerfile` fourni dans `backend/` est un bon point de départ — Railway,
-Fly.io, un VPS...), puis mettre son URL en dur (ou par défaut) dans
-`extension/api.js` et l'ajouter à `host_permissions`.
+Chaque personne qui installe l'extension doit renseigner **sa propre** clé
+API YouTube dans les réglages (gratuite, voir section suivante) — l'extension
+n'embarque pas de clé partagée.
+
+## 2. Récupérer une clé YouTube Data API v3 (gratuite)
+
+1. Va sur [console.cloud.google.com](https://console.cloud.google.com/), crée
+   un projet (ou réutilise un existant).
+2. Dans "API et services" → "Bibliothèque", active **YouTube Data API v3**.
+3. Dans "API et services" → "Identifiants", crée une **clé API**.
+4. Ouvre les réglages de l'extension → "Réglages avancés" → colle la clé dans
+   "Clé API YouTube" → "Enregistrer".
+
+Le quota gratuit est de 10 000 unités/jour. Le rafraîchissement automatique
+n'utilise que des appels à 1 unité (très large marge même avec des centaines
+de chaînes suivies). Seules les fonctions de **découverte** de chaînes
+(recherche par mot-clé ou par chaîne similaire) coûtent 100 unités/appel —
+utilise-les ponctuellement, pas en boucle.
 
 ## 3. Utiliser le bot
 
-Dans la page **Réglages** de l'extension :
+Dans la page **Réglages** de l'extension, le premier bloc te demande juste :
+ta chaîne YouTube, une description de ta niche, et (optionnel) des liens de
+chaînes similaires — un bouton "Créer mon flux d'outliers" fait le reste.
 
-- **Niches** : crée tes catégories (les 6 par défaut existent déjà côté serveur).
-- **Ajouter une chaîne** : colle une URL YouTube (`/@handle`, `/channel/UC...`,
-  `/c/...`) ou un nom, choisis la niche, "Ajouter".
-- **Découvrir des chaînes similaires** : donne une chaîne "modèle" — l'outil
-  cherche des chaînes au vocabulaire proche (titre/description), tu coches
-  celles à suivre puis "Ajouter la sélection".
-- **Découvrir par niche/mot-clé** : tape un mot-clé ("gaming fr", "GTA RP",
-  "cinéma critique"...), coche les chaînes pertinentes, ajoute-les en masse.
+Les outils plus avancés (ajouter une chaîne dans une niche précise,
+découverte par mot-clé ou par chaîne modèle, gestion fine des niches, clé
+API) sont repliés dans "⚙ Réglages avancés".
 
 Dans le **popup** (clic sur l'icône) :
 
 - Filtre par niche et par seuil de score (x2, x3, x5, x10...).
-- Chaque carte = une vidéo outlier, avec son multiplicateur (`x4.2`), ses vues,
-  sa niche, et un badge **NOUVEAU** si elle vient d'être détectée.
+- Chaque carte montre : miniature, titre, chaîne, **multiplicateur** (`x4.2`),
+  nombre de vues, niche, et un badge **NOUVEAU** si détecté récemment.
 - Bouton **↻** pour forcer un rafraîchissement immédiat (sinon automatique
-  toutes les 2h).
-- Un badge rouge sur l'icône + une notification système apparaissent quand
-  l'extension détecte de nouveaux outliers (vérification toutes les 15 min).
+  selon l'intervalle réglé, 2h par défaut).
+- Onglet **"⭐ Ma liste"** pour retrouver les vidéos que tu as toi-même
+  marquées sur YouTube.
 
-## 4. Marquer tes propres outliers en un clic (le cœur ❤️)
+## 4. Marquer tes propres outliers en un clic
 
 En plus de la détection automatique, tu peux repérer un outlier "à l'œil" en
 te baladant sur YouTube :
@@ -177,18 +145,11 @@ te baladant sur YouTube :
   dans une playlist"...) : une option "Ajouter à la liste d'outliers" apparaît
   au même endroit que les actions natives de YouTube. *(Expérimental — le menu
   de YouTube est une des parties les plus mouvantes de son DOM.)*
-- Tout est enregistré côté **backend** (pas juste dans le navigateur) : ouvre
-  l'onglet **"⭐ Ma liste"** du popup pour retrouver tous tes coups de cœur,
-  les classer par niche (menu déroulant sur chaque carte), ou les retirer.
-
-Comme c'est stocké en base sur le backend, ta liste survit à un changement
-d'ordinateur, une réinstallation de l'extension, un nettoyage du cache
-Chrome, etc. — tant que tu pointes vers la même base de données.
 
 **Bonus — épingler des chaînes en haut de tes abonnements** : dans le menu
 latéral de YouTube, une étoile apparaît au survol de chaque chaîne abonnée ;
 cliquer dessus la fait remonter en haut de la liste. C'est une préférence
-locale à ton navigateur (`chrome.storage.local`), indépendante du backend.
+locale à ton navigateur (`chrome.storage.local`), indépendante du reste.
 
 > YouTube change régulièrement la structure de ses pages ; si le cœur ou le
 > menu ⋮ n'apparaissent plus après une mise à jour de YouTube, les sélecteurs
@@ -197,51 +158,58 @@ locale à ton navigateur (`chrome.storage.local`), indépendante du backend.
 
 ## Détails techniques
 
-### Backend (`backend/`)
-
-- `app/models.py` — tables `Niche`, `Channel`, `Video`, `VideoSnapshot` (SQLite via SQLAlchemy).
-- `app/youtube_client.py` — wrapper HTTP async pour l'API YouTube Data v3
-  (résolution de chaîne quel que soit le format d'entrée, récupération batched
-  des vidéos, recherche de chaînes).
-- `app/outliers.py` — calcul du score outlier (médiane robuste).
-- `app/refresh.py` — cycle de rafraîchissement par chaîne, détection des
-  transitions "devient outlier" pour marquer les nouveautés.
-- `app/discovery.py` — extraction de mots-clés + recherche de chaînes similaires.
-- `app/scheduler.py` — APScheduler, job toutes les `REFRESH_INTERVAL_HOURS`
-  (premier passage immédiat au démarrage).
-- `app/routers/` — endpoints REST (`/niches`, `/channels`, `/outliers`,
-  `/discover/*`, `/favorites/*`, `/refresh/run`, `/status`).
-
 ### Extension (`extension/`)
 
-- `manifest.json` — Manifest V3, permissions minimales (`storage`, `alarms`,
-  `notifications`) + `content_scripts` sur `youtube.com`.
-- `theme.css` — design system partagé (couleurs, boutons pill, cartes) entre
-  popup et réglages.
-- `api.js` — client fetch partagé vers le backend.
+- `manifest.json` — Manifest V3, permissions minimales (`storage`,
+  `unlimitedStorage`, `alarms`, `notifications`) + accès à
+  `googleapis.com` (API YouTube) + `content_scripts` sur `youtube.com`.
+- `lib/youtube.js` — client YouTube Data API v3 (fetch), résolution de
+  chaîne quel que soit le format d'entrée, récupération batched des vidéos,
+  recherche de chaînes.
+- `lib/outliers.js` — calcul du score outlier (médiane robuste).
+- `lib/store.js` — tout le "backend" en JS pur : CRUD niches/chaînes/vidéos/
+  favoris sur `chrome.storage.local`, cycle de rafraîchissement complet,
+  purge de l'historique au-delà de 30 jours (conformité API YouTube).
+  Testable sans navigateur (voir plus bas).
+- `background.js` — service worker : orchestre tout (alarmes, notifications,
+  et les appels venant du popup/des réglages via `chrome.runtime.sendMessage`).
+- `api.js` — petite couche utilisée par popup/réglages : relaie les appels
+  vers `background.js` par message (au lieu d'un `fetch` HTTP vers un
+  serveur) et convertit les réponses en snake_case pour un contrat stable.
+- `theme.css` — design system partagé (couleurs, boutons pill, cartes).
 - `popup.html/js/css` — onglets "Outliers" et "⭐ Ma liste", filtres, refresh manuel.
-- `options.html/js/css` — flux d'onboarding simplifié (chaîne + niche décrite
-  en texte libre + chaînes similaires) en avant, réglages techniques
-  (URL backend, découverte avancée, niches) repliés dans un `<details>`.
-- `background.js` — service worker : poll toutes les 15 min pour les
-  notifications de nouveaux outliers, et relais réseau (`fetch`) pour les
-  content scripts (qui ne font jamais d'appel réseau direct, pour rester
-  simples vis-à-vis de la CSP des pages YouTube).
+- `options.html/js/css` — flux d'onboarding simplifié en avant, réglages
+  techniques (clé API, découverte avancée, niches) repliés dans un `<details>`.
 - `content.js` / `content.css` — injectés sur `youtube.com` : cœur sur chaque
   miniature (ancienne et nouvelle structure `yt-lockup-view-model`) + cœur
   flottant sur la page de lecture + item "Ajouter à la liste d'outliers"
-  injecté dans le menu ⋮ natif ; communication avec `background.js` via
-  `chrome.runtime.sendMessage`.
+  injecté dans le menu ⋮ natif.
 - `subscriptions.js` / `subscriptions.css` — étoile pour épingler des chaînes
-  en haut du menu latéral d'abonnements (préférence locale, `chrome.storage.local`,
-  aucun lien avec le backend).
+  en haut du menu latéral d'abonnements.
+
+### Tester sans navigateur
+
+Toute la logique métier (`lib/*.js`) est écrite pour tourner aussi bien dans
+un service worker Chrome que dans Node (détection `typeof self`/`module.exports`),
+ce qui permet de la tester avec `chrome.storage` et `fetch` mockés — utile
+pour vérifier une modification avant de recharger l'extension. Exemple :
+
+```bash
+node -e "
+const Store = require('./extension/lib/store.js');
+const YouTube = require('./extension/lib/youtube.js');
+const OutlierEngine = require('./extension/lib/outliers.js');
+// ... voir les tests d'intégration utilisés pendant le développement pour un exemple complet
+"
+```
 
 ### Aller plus loin (pistes non implémentées)
 
-- Détection par **vélocité** (vitesse de croissance des vues) grâce aux
-  `VideoSnapshot` déjà enregistrés à chaque cycle — actuellement stockés mais
-  pas encore exploités dans le score.
-- Comparaison **inter-chaînes** au sein d'une niche (pas seulement outlier par
-  rapport à sa propre chaîne).
-- Déploiement du backend sur un serveur distant pour un accès multi-utilisateurs
-  (le `Dockerfile` fourni dans `backend/` est un bon point de départ).
+- Détection par **vélocité** (vitesse de croissance des vues) — les
+  snapshots de vues sont déjà enregistrés à chaque cycle mais pas encore
+  exploités dans le score.
+- Comparaison **inter-chaînes** au sein d'une niche (pas seulement outlier
+  par rapport à sa propre chaîne).
+- Synchronisation multi-appareils : `chrome.storage.local` ne synchronise
+  pas entre plusieurs ordinateurs. `chrome.storage.sync` existe mais son
+  quota (100 Ko) est bien trop petit pour ce volume de données.

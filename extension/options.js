@@ -1,64 +1,57 @@
 let nichesCache = [];
-let backendReachable = false;
+let apiKeyConfigured = false;
 
 function setFeedback(el, message, ok) {
   el.textContent = message;
   el.className = "feedback " + (ok ? "ok" : "err");
 }
 
-async function initBackendUrl() {
-  const url = await getBackendUrl();
-  document.getElementById("backendUrl").value = url;
-  await pingBackend();
-  startBackendWatcher();
+// Seul vrai prérequis maintenant : une clé API YouTube (tout le reste tourne
+// dans l'extension elle-même, plus de serveur à lancer). Bandeau visible tant
+// qu'elle n'est pas configurée, bouton "Créer mon flux" désactivé pareil.
+function setApiKeyState(configured) {
+  apiKeyConfigured = configured;
+  document.getElementById("apiKeyBanner").classList.toggle("hidden", configured);
+  document.getElementById("createFlowBtn").disabled = !configured;
 }
 
-// Bandeau impossible à manquer + bouton désactivé quand le serveur ne
-// répond pas, avec un check automatique en arrière-plan : dès que le
-// serveur démarre, tout se débloque tout seul, pas besoin de recharger.
-function setBackendReachable(reachable) {
-  const wasReachable = backendReachable;
-  backendReachable = reachable;
-  document.getElementById("offlineBanner").classList.toggle("hidden", reachable);
-  document.getElementById("createFlowBtn").disabled = !reachable;
-  if (reachable && !wasReachable) {
-    refreshAll();
-  }
+async function refreshApiKeyState() {
+  const s = await api.getStatus();
+  setApiKeyState(s.youtube_api_key_configured);
+  return s;
 }
 
-let watcherInterval = null;
-function startBackendWatcher() {
-  clearInterval(watcherInterval);
-  watcherInterval = setInterval(async () => {
-    try {
-      await api.getStatus();
-      setBackendReachable(true);
-    } catch (e) {
-      setBackendReachable(false);
-    }
-  }, 4000);
+async function initSettings() {
+  const settings = await api.getSettings();
+  document.getElementById("apiKeyInput").value = settings.youtube_api_key || "";
+  document.getElementById("refreshHoursInput").value = settings.refresh_interval_hours || 2;
+  await pingApiKey();
 }
 
-async function pingBackend() {
-  const pill = document.getElementById("backendStatus");
+async function pingApiKey() {
+  const pill = document.getElementById("apiKeyStatus");
   pill.textContent = "…";
   pill.className = "pill-status";
-  try {
-    const s = await api.getStatus();
-    pill.textContent = s.youtube_api_key_configured ? "connecté ✓" : "clé API manquante";
-    pill.className = "pill-status " + (s.youtube_api_key_configured ? "ok" : "err");
-    setBackendReachable(true);
-  } catch (e) {
-    pill.textContent = "injoignable";
-    pill.className = "pill-status err";
-    setBackendReachable(false);
-  }
+  const s = await refreshApiKeyState();
+  pill.textContent = s.youtube_api_key_configured ? "configurée ✓" : "manquante";
+  pill.className = "pill-status " + (s.youtube_api_key_configured ? "ok" : "err");
 }
 
-document.getElementById("saveBackend").addEventListener("click", async () => {
-  await setBackendUrl(document.getElementById("backendUrl").value.trim());
-  await pingBackend();
+document.getElementById("saveApiKey").addEventListener("click", async () => {
+  const key = document.getElementById("apiKeyInput").value.trim();
+  await api.updateSettings({ youtube_api_key: key });
+  await pingApiKey();
   await refreshAll();
+});
+
+document.getElementById("saveRefreshHours").addEventListener("click", async () => {
+  const hours = parseFloat(document.getElementById("refreshHoursInput").value) || 2;
+  await api.updateSettings({ refresh_interval_hours: hours });
+});
+
+document.getElementById("openApiKeyField").addEventListener("click", () => {
+  document.querySelector(".advanced").open = true;
+  document.getElementById("apiKeyInput").focus();
 });
 
 async function loadNiches() {
@@ -111,7 +104,7 @@ async function loadChannels() {
   try {
     channels = await api.getChannels(niche);
   } catch (e) {
-    return; // le bandeau "serveur éteint" affiche déjà le problème
+    return; // pas de chaîne suivie ou clé API pas encore configurée
   }
   const ul = document.getElementById("channelList");
   ul.innerHTML = "";
@@ -342,5 +335,6 @@ async function refreshAll() {
 }
 
 (async function init() {
-  await initBackendUrl();
+  await initSettings();
+  await refreshAll();
 })();

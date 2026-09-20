@@ -1,81 +1,67 @@
-// Petite couche d'accès à l'API du backend, partagée entre popup/options/background.
+// Couche d'accès aux données, partagée entre popup et réglages. Ne fait plus
+// de requête réseau vers un serveur : tout passe par un message vers le
+// service worker (background.js), qui lit/écrit chrome.storage.local.
+//
+// Les réponses sont converties de camelCase (naturel en JS, utilisé dans
+// lib/store.js) vers snake_case, pour garder exactement le même contrat que
+// l'ancien backend et ne rien changer côté popup.js / options.js.
 
-const DEFAULT_BACKEND_URL = "http://127.0.0.1:8000";
-
-async function getBackendUrl() {
-  const { backendUrl } = await chrome.storage.sync.get("backendUrl");
-  return (backendUrl || DEFAULT_BACKEND_URL).replace(/\/+$/, "");
+function toSnakeKey(key) {
+  return key.replace(/[A-Z]/g, (m) => `_${m.toLowerCase()}`);
 }
 
-async function setBackendUrl(url) {
-  await chrome.storage.sync.set({ backendUrl: url.replace(/\/+$/, "") });
-}
-
-// Message affiché partout dans l'interface quand le serveur ne répond pas du
-// tout (pas lancé, mauvaise adresse...). Un seul texte, simple, pas de jargon.
-const SERVER_OFFLINE_MESSAGE = "Ton serveur ne répond pas. Lance-le, puis reviens ici.";
-
-async function apiFetch(path, options = {}) {
-  const base = await getBackendUrl();
-  let resp;
-  try {
-    resp = await fetch(base + path, {
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...(options.headers || {}),
-      },
-    });
-  } catch (e) {
-    // fetch() rejette avec un message technique ("Failed to fetch") dès que le
-    // serveur est injoignable : on le remplace toujours par un message clair.
-    throw new Error(SERVER_OFFLINE_MESSAGE);
-  }
-
-  if (!resp.ok) {
-    let detail = "";
-    try {
-      const body = await resp.json();
-      detail = body.detail || "";
-    } catch (e) {
-      // pas de corps JSON
+function deepSnakeCase(value) {
+  if (Array.isArray(value)) return value.map(deepSnakeCase);
+  if (value && typeof value === "object") {
+    const out = {};
+    for (const [k, v] of Object.entries(value)) {
+      out[toSnakeKey(k)] = deepSnakeCase(v);
     }
-    throw new Error(detail || "Une erreur est survenue, réessaie dans un instant.");
+    return out;
   }
-  if (resp.status === 204) return null;
-  return resp.json();
+  return value;
+}
+
+function call(method, ...args) {
+  return new Promise((resolve, reject) => {
+    chrome.runtime.sendMessage({ type: "API_CALL", method, args }, (resp) => {
+      if (chrome.runtime.lastError) {
+        reject(new Error("L'extension vient peut-être d'être rechargée — réouvre le popup."));
+        return;
+      }
+      if (!resp || !resp.ok) {
+        reject(new Error((resp && resp.error) || "Une erreur est survenue, réessaie dans un instant."));
+        return;
+      }
+      resolve(deepSnakeCase(resp.result));
+    });
+  });
 }
 
 const api = {
-  getNiches: () => apiFetch("/niches"),
-  createNiche: (name) => apiFetch("/niches", { method: "POST", body: JSON.stringify({ name }) }),
-  deleteNiche: (id) => apiFetch(`/niches/${id}`, { method: "DELETE" }),
+  getNiches: () => call("getNiches"),
+  createNiche: (name) => call("createNiche", name),
+  deleteNiche: (id) => call("deleteNiche", id),
 
-  getChannels: (niche) => apiFetch(`/channels${niche ? `?niche=${encodeURIComponent(niche)}` : ""}`),
-  addChannel: (channel, niche) =>
-    apiFetch("/channels", { method: "POST", body: JSON.stringify({ channel, niche }) }),
-  deleteChannel: (id) => apiFetch(`/channels/${id}`, { method: "DELETE" }),
+  getChannels: (niche) => call("getChannels", niche),
+  addChannel: (channel, niche) => call("addChannel", channel, niche),
+  deleteChannel: (id) => call("deleteChannel", id),
 
-  getOutliers: (params = {}) => {
-    const qs = new URLSearchParams(params).toString();
-    return apiFetch(`/outliers${qs ? `?${qs}` : ""}`);
-  },
+  getOutliers: (params = {}) => call("getOutliers", params),
 
-  discoverSimilar: (channel, limit = 15) =>
-    apiFetch("/discover/similar", { method: "POST", body: JSON.stringify({ channel, limit }) }),
-  discoverByQuery: (query, limit = 15) =>
-    apiFetch("/discover/query", { method: "POST", body: JSON.stringify({ query, limit }) }),
-  addBulk: (niche, channel_ids) =>
-    apiFetch("/discover/add-bulk", { method: "POST", body: JSON.stringify({ niche, channel_ids }) }),
+  discoverSimilar: (channel, limit = 15) => call("discoverSimilar", channel, limit),
+  discoverByQuery: (query, limit = 15) => call("discoverByQuery", query, limit),
+  addBulk: (niche, channel_ids) => call("addBulk", niche, channel_ids),
 
-  runRefresh: () => apiFetch("/refresh/run", { method: "POST" }),
-  getStatus: () => apiFetch("/status"),
+  runRefresh: () => call("runRefresh"),
+  getStatus: () => call("getStatus"),
 
-  getFavorites: (niche) => apiFetch(`/favorites${niche ? `?niche=${encodeURIComponent(niche)}` : ""}`),
-  addFavorite: (payload) => apiFetch("/favorites", { method: "POST", body: JSON.stringify(payload) }),
-  removeFavorite: (videoId) => apiFetch(`/favorites/${videoId}`, { method: "DELETE" }),
-  updateFavorite: (videoId, niche) =>
-    apiFetch(`/favorites/${videoId}`, { method: "PATCH", body: JSON.stringify({ niche }) }),
-  checkFavorites: (ids) =>
-    ids.length ? apiFetch(`/favorites/check?ids=${encodeURIComponent(ids.join(","))}`) : Promise.resolve({ favorited: [] }),
+  getSettings: () => call("getSettings"),
+  updateSettings: (patch) => call("updateSettings", patch),
+
+  getFavorites: (niche) => call("getFavorites", niche),
+  addFavorite: (payload) => call("addFavorite", payload),
+  removeFavorite: (videoId) => call("removeFavorite", videoId),
+  updateFavorite: (videoId, niche) => call("updateFavorite", videoId, niche),
+  checkFavorites: (ids) => (ids.length ? call("checkFavorites", ids).then((r) => ({ favorited: r })) : Promise.resolve({ favorited: [] })),
 };

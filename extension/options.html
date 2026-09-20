@@ -16,11 +16,12 @@
       <p class="tagline">Trouve ce qui explose sur YouTube, dans ta niche.</p>
     </header>
 
-    <div id="offlineBanner" class="offline-banner hidden">
-      <span class="offline-banner-icon">😴</span>
-      <div>
-        <strong>Ton serveur dort encore.</strong>
-        <p>Démarre-le, cette page se réveillera toute seule dès qu'il répond.</p>
+    <div id="apiKeyBanner" class="offline-banner hidden">
+      <span class="offline-banner-icon">🔑</span>
+      <div class="offline-banner-body">
+        <strong>Il manque juste ta clé API YouTube.</strong>
+        <p>Gratuite, 2 minutes à récupérer sur Google.</p>
+        <button id="openApiKeyField" class="ghost-btn">Ajouter ma clé →</button>
       </div>
     </div>
 
@@ -58,11 +59,22 @@
       <summary>⚙ Réglages avancés</summary>
 
       <div class="field">
-        <label for="backendUrl">Adresse du serveur</label>
+        <label for="apiKeyInput">
+          Clé API YouTube
+          <a href="https://console.cloud.google.com/apis/credentials" target="_blank" class="field-help">comment l'obtenir →</a>
+        </label>
         <div class="row">
-          <input id="backendUrl" type="text" placeholder="http://127.0.0.1:8000" />
-          <button id="saveBackend" class="ghost-btn">Enregistrer</button>
-          <span id="backendStatus" class="pill-status"></span>
+          <input id="apiKeyInput" type="text" placeholder="Colle ta clé API YouTube ici" />
+          <button id="saveApiKey" class="ghost-btn">Enregistrer</button>
+          <span id="apiKeyStatus" class="pill-status"></span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="refreshHoursInput">Rafraîchissement automatique (en heures)</label>
+        <div class="row">
+          <input id="refreshHoursInput" type="text" placeholder="2" style="max-width: 100px;" />
+          <button id="saveRefreshHours" class="ghost-btn">Enregistrer</button>
         </div>
       </div>
 
@@ -103,7 +115,7 @@
         <ul id="nicheList" class="chip-list"></ul>
       </div>
 
-      <p class="hint">Le seuil de détection et la fréquence de rafraîchissement (2h par défaut) se configurent côté serveur, dans <code>backend/.env</code>.</p>
+      <p class="hint">Tout est stocké dans ton navigateur (chrome.storage), rien ne quitte ta machine à part les appels à l'API YouTube elle-même.</p>
     </details>
 
     <p class="legal-footer">

@@ -1,66 +1,31 @@
 # Tuto — Utiliser Outlier Finder de A à Z
 
 Ce guide t'emmène du zéro absolu jusqu'à ton premier outlier détecté, puis à
-l'usage quotidien du bot. Pour la doc technique détaillée (architecture,
-fichiers, config avancée), voir le [`README.md`](./README.md).
+l'usage quotidien du bot. Pour la doc technique détaillée, voir le
+[`README.md`](./README.md).
 
-**Temps total la première fois : ~15 minutes**, dont 10 min d'attente pour la
-clé API Google. Après ça, c'est piloté au clic.
+**Temps total la première fois : ~10 minutes**, dont 5 min d'attente pour la
+clé API Google. Après ça, c'est piloté au clic — **pas de serveur, pas de
+terminal, tout tourne dans Chrome.**
 
 ---
 
 ## Étape 0 — Comprendre le principe en 30 secondes
 
-- Un **serveur** (le backend) tourne en tâche de fond sur ton ordi et va
-  chercher les stats des chaînes YouTube que tu lui donnes, toutes les 2h.
-- Il compare chaque nouvelle vidéo aux habitudes de sa propre chaîne. Si elle
-  explose (x3 la médiane par défaut), c'est un **outlier**.
-- Une **extension Chrome** te sert de fenêtre sur ce serveur : tu y ajoutes
-  des chaînes/niches, tu y consultes les outliers, et un petit **cœur ❤️**
-  apparaît directement sur YouTube pour que tu marques toi-même les pépites
-  que tu repères en scrollant.
+- L'**extension Chrome** fait tout elle-même : elle va chercher les stats
+  des chaînes YouTube que tu lui donnes, toutes les 2h, en tâche de fond,
+  même popup fermé.
+- Elle compare chaque nouvelle vidéo aux habitudes de sa propre chaîne. Si
+  elle explose (x3 la médiane par défaut), c'est un **outlier**.
+- Un petit **cœur ♡** apparaît directement sur YouTube pour que tu marques
+  toi-même les pépites que tu repères en scrollant.
 
-Tant que le serveur ne tourne pas, l'extension n'a rien à afficher — retiens
-juste ça, c'est la cause n°1 de "ça marche pas".
-
----
-
-## Étape 1 — Lancer le serveur (une fois, puis à chaque session de travail)
-
-Ouvre un terminal :
-
-```bash
-cd backend
-python3 -m venv venv                # une seule fois
-source venv/bin/activate            # Windows : venv\Scripts\activate
-pip install -r requirements.txt     # une seule fois
-cp .env.example .env                # une seule fois
-```
-
-**Récupère ta clé YouTube Data API v3** (gratuite, ~5 min) :
-
-1. [console.cloud.google.com](https://console.cloud.google.com/) → crée un projet.
-2. "API et services" → "Bibliothèque" → active **YouTube Data API v3**.
-3. "API et services" → "Identifiants" → "Créer des identifiants" → **Clé API**.
-4. Copie-la dans `backend/.env`, ligne `YOUTUBE_API_KEY=...`.
-
-Puis à chaque fois que tu veux utiliser le bot :
-
-```bash
-source venv/bin/activate            # si pas déjà fait
-uvicorn app.main:app --reload
-```
-
-✅ **Tu dois voir** `Application startup complete` et `Uvicorn running on
-http://127.0.0.1:8000`. Laisse ce terminal ouvert — c'est le cœur qui bat.
-
-> Tant que ce terminal tourne, le serveur récupère les données toutes les 2h
-> automatiquement. Tu peux le couper (`Ctrl+C`) et le relancer plus tard, rien
-> n'est perdu (tout est sauvegardé dans `backend/outliers.db`).
+Le seul truc à faire avant de commencer : une clé API YouTube gratuite (voir
+étape 2). Sans elle, l'extension ne peut pas aller chercher de données.
 
 ---
 
-## Étape 2 — Charger l'extension dans Chrome (une fois)
+## Étape 1 — Charger l'extension dans Chrome (une fois)
 
 1. `chrome://extensions` dans la barre d'adresse.
 2. Active **le mode développeur** (interrupteur en haut à droite).
@@ -68,41 +33,57 @@ http://127.0.0.1:8000`. Laisse ce terminal ouvert — c'est le cœur qui bat.
    `extension/` du projet.
 4. Épingle-la (icône 📌) pour la garder visible dans la barre d'outils.
 
-✅ **Tu dois voir** l'icône Outlier Finder apparaître. Clique dessus : si le
-bandeau du haut dit "connecté ✓", le lien avec le serveur fonctionne.
+✅ **Tu dois voir** l'icône Outlier Finder apparaître dans la barre d'outils.
 
 ---
 
-## Étape 3 — Créer tes niches et ajouter tes premières chaînes
+## Étape 2 — Récupère ta clé YouTube (gratuite, ~5 min)
 
-Clique sur l'icône → l'engrenage ⚙ (ou clic droit sur l'icône → Options).
+1. Clique sur l'icône de l'extension → l'engrenage ⚙ (ou clic droit sur
+   l'icône → Options) pour ouvrir la page de réglages.
+2. Tu verras un bandeau "🔑 Il manque juste ta clé API YouTube" — pas de
+   panique, c'est normal au tout premier lancement.
+3. Va sur [console.cloud.google.com](https://console.cloud.google.com/) →
+   crée un projet (bouton en haut, quelques secondes).
+4. Menu (☰) → "API et services" → "Bibliothèque" → cherche **YouTube Data
+   API v3** → clique "Activer".
+5. "API et services" → "Identifiants" → "Créer des identifiants" → **Clé
+   API** → copie la clé qui apparaît.
+6. Retourne sur la page de réglages de l'extension → clique "Ajouter ma clé →"
+   dans le bandeau → colle la clé → "Enregistrer".
 
-1. **Niches** : les 6 par défaut existent déjà (Divertissement, Gaming, GTA,
-   Fortnite, Cinéma, Mac). Ajoute les tiennes si besoin (champ + bouton "Créer").
-2. **Ajouter une chaîne** : colle une URL YouTube (`youtube.com/@nomdelachaine`,
-   `/channel/UC...`, `/c/...`) ou tape juste son nom, choisis la niche,
-   "Ajouter".
-3. Répète pour 5-10 chaînes par niche — plus tu en mets, plus le bot a de la
-   matière pour repérer les écarts.
-
-**Tu ne connais pas assez de chaînes dans une niche ?** Utilise la
-**découverte** :
-
-- *Chaînes similaires* : colle l'URL d'une chaîne que tu aimes → le bot
-  propose des chaînes au vocabulaire proche → coche celles qui t'intéressent
-  → "Ajouter la sélection".
-- *Par mot-clé* : tape "gaming fr", "GTA RP", "cinéma critique"... → même
-  principe, tu coches et tu ajoutes en masse.
-
-✅ **Tu dois voir** tes chaînes apparaître dans la liste "Chaînes suivies" en
-bas de la section 3, avec leur miniature.
+✅ **Tu dois voir** le bandeau disparaître et un badge "configurée ✓" à côté
+du champ. C'est allumé, pour de bon cette fois — rien à relancer, jamais.
 
 ---
 
-## Étape 4 — Attendre (ou forcer) le premier passage
+## Étape 3 — Crée ton premier flux d'outliers
 
-Le bot analyse automatiquement toutes les chaînes suivies **immédiatement au
-démarrage du serveur**, puis toutes les 2h. Pour ne pas attendre :
+Toujours sur la page de réglages, le premier bloc te demande 3 choses :
+
+1. **Ta chaîne YouTube** (colle un lien, ex: `youtube.com/@nomdelachaine`)
+   ou une chaîne que tu veux suivre.
+2. **Décris ta niche** en quelques mots (ex: "Gaming FR", "GTA RP", "Cinéma").
+3. **Chaînes similaires** (optionnel) — colle des liens, un par ligne, de
+   chaînes qui t'inspirent dans la même niche.
+
+Clique **"🚀 Créer mon flux d'outliers"**.
+
+✅ **Tu dois voir** un message vert confirmant combien de chaînes ont été
+ajoutées, et elles apparaissent dans la liste "Tes chaînes suivies" juste en
+dessous.
+
+**Tu ne connais pas assez de chaînes dans ta niche ?** Ouvre "⚙ Réglages
+avancés" → section "Découvrir des chaînes par mot-clé" ou "chaînes similaires
+à une chaîne donnée" → coche celles qui t'intéressent → "Ajouter la
+sélection".
+
+---
+
+## Étape 4 — Attendre (ou forcer) le premier scan
+
+L'extension analyse automatiquement toutes les chaînes suivies dès que la clé
+API est configurée, puis toutes les 2h. Pour ne pas attendre :
 
 1. Ouvre le **popup** (clic sur l'icône).
 2. Clique sur **↻** en haut à droite.
@@ -110,7 +91,7 @@ démarrage du serveur**, puis toutes les 2h. Pour ne pas attendre :
 
 ✅ **Tu dois voir** la barre de statut passer à un nombre de chaînes/niches
 suivies, puis la liste se remplir avec des cartes vidéo si des outliers sont
-trouvés. Si la liste reste vide, c'est probablement normal : pas de vidéo ne
+trouvés. Si la liste reste vide, c'est probablement normal : aucune vidéo ne
 dépasse encore x3 la médiane de sa chaîne (baisse le seuil dans le menu
 déroulant "Seuil" pour voir plus large, ex. x2).
 
@@ -118,24 +99,22 @@ déroulant "Seuil" pour voir plus large, ex. x2).
 
 ## Étape 5 — Lire et filtrer les outliers (usage quotidien)
 
-Dans le popup, onglet **"Outliers auto"** :
+Dans le popup, onglet **"Outliers"** :
 
 - **Filtre par niche** (menu déroulant du haut) pour te concentrer sur
   "Gaming" ou "Cinéma" par exemple.
 - **Filtre par seuil** : x2 (large), x3 (par défaut), x5, x10 (les vraies
   bombes).
 - Chaque carte montre : miniature, titre, chaîne, **multiplicateur** (`x4.2`),
-  nombre de vues, niche, et un badge **NOUVEAU** si détecté dans les 3
-  dernières heures.
+  nombre de vues, niche, et un badge **NOUVEAU** si détecté récemment.
 - Clique sur une carte → ouvre la vidéo sur YouTube dans un nouvel onglet.
 
-Le badge rouge sur l'icône de l'extension + une notification système
-t'avertissent automatiquement dès qu'un nouvel outlier tombe (vérification
-toutes les 15 min), même popup fermé.
+Le badge sur l'icône de l'extension + une notification système t'avertissent
+automatiquement dès qu'un nouvel outlier tombe, même popup fermé.
 
 ---
 
-## Étape 6 — Marquer tes propres outliers avec le cœur (au fil de ton scroll)
+## Étape 6 — Marquer tes propres outliers (au fil de ton scroll)
 
 Pas besoin d'ouvrir l'extension pour ça : va sur YouTube normalement.
 
@@ -143,20 +122,14 @@ Pas besoin d'ouvrir l'extension pour ça : va sur YouTube normalement.
   **♡** apparaît en haut à droite → clique → il devient **♥** violet.
 - **Sur une vidéo que tu regardes** : un cœur flottant en bas à droite de
   l'écran fait la même chose.
-- **Via le menu ⋮** d'une vidéo (celui avec "Regarder plus tard", etc.) :
-  option "Ajouter à la liste d'outliers", au même endroit que les autres
-  actions natives de YouTube. *(Fonctionnalité expérimentale : le menu de
-  YouTube change souvent, préviens-moi si l'option n'apparaît pas.)*
-
-✅ **Tu dois voir** le cœur changer de couleur instantanément. Ça part tout
-seul vers le serveur, pas besoin de rien valider ailleurs.
+- **Via le menu ⋮** d'une vidéo : option "Ajouter à la liste d'outliers", au
+  même endroit que "Regarder plus tard". *(Expérimental — préviens-moi si tu
+  ne le vois pas.)*
 
 **Bonus — épingler tes chaînes préférées dans tes abonnements** : dans le
 menu latéral de YouTube, une étoile ☆ apparaît au survol de chaque chaîne
-abonnée. Clique dessus (elle devient ★) pour la faire remonter en haut de
-ta liste d'abonnements — pratique pour toujours voir tes chaînes de
-référence en premier. C'est une préférence propre à ton navigateur, pas liée
-au backend.
+abonnée. Clique dessus (elle devient ★) pour la faire remonter en haut de ta
+liste d'abonnements.
 
 ---
 
@@ -165,27 +138,25 @@ au backend.
 Retourne dans le popup → onglet **"⭐ Ma liste"**.
 
 - Tous tes cœurs cliqués s'y retrouvent, du plus récent au plus ancien.
-- **Classe-les par niche** avec le menu déroulant de chaque carte (pratique
-  pour trier après coup un pick fait "à chaud").
+- **Classe-les par niche** avec le menu déroulant de chaque carte.
 - **✕** pour en retirer un si tu t'es trompé de bouton.
 - Filtre par niche en haut de l'onglet pour ne voir qu'une catégorie.
 
-Cette liste vit dans la base du serveur, donc elle **survit** à un
-redémarrage du navigateur, un nettoyage de cache, ou une réinstallation de
-l'extension.
+Cette liste vit dans le stockage de l'extension (`chrome.storage.local`),
+donc elle **survit** à un redémarrage du navigateur ou de l'ordinateur — tant
+que tu ne désinstalles pas l'extension ou ne nettoies pas les données du
+profil Chrome.
 
 ---
 
 ## Routine recommandée
 
-1. Le matin (ou avant une session de veille) : lance le serveur
-   (`uvicorn app.main:app --reload`) si ce n'est pas déjà fait.
-2. Ouvre le popup, onglet "Outliers auto", filtre par niche du jour → repère
-   ce qui a explosé pendant la nuit.
-3. En scrollant YouTube dans la journée, cœur ♡ sur tout ce qui te semble
+1. Ouvre le popup, onglet "Outliers", filtre par niche du jour → repère ce
+   qui a explosé.
+2. En scrollant YouTube dans la journée, cœur ♡ sur tout ce qui te semble
    sortir du lot — même si le bot ne l'a pas encore détecté (il ne voit que
    les chaînes que tu lui as données).
-4. En fin de semaine, onglet "Ma liste" → range tes trouvailles par niche →
+3. En fin de semaine, onglet "Ma liste" → range tes trouvailles par niche →
    ça devient ta banque d'inspiration pour tes propres formats.
 
 ---
@@ -194,14 +165,13 @@ l'extension.
 
 | Symptôme | Cause probable | Solution |
 |---|---|---|
-| "Backend injoignable" dans le popup | Le serveur n'est pas lancé | Relance `uvicorn app.main:app --reload` |
-| "⚠️ Clé YOUTUBE_API_KEY manquante" | `.env` pas rempli | Renseigne `YOUTUBE_API_KEY` dans `backend/.env`, relance le serveur |
+| Bandeau "clé API manquante" persistant | Clé pas encore collée/enregistrée | Réglages avancés → colle la clé → "Enregistrer" |
 | Liste d'outliers vide | Pas assez de vidéos par chaîne, ou seuil trop haut | Baisse le seuil (x2), attends le prochain cycle, ajoute plus de chaînes |
 | Le cœur n'apparaît pas sur YouTube | Extension pas rechargée après mise à jour, ou YouTube a changé son DOM | `chrome://extensions` → bouton ↻ sur l'extension ; si ça persiste, voir la note dans `README.md` sur `content.js` |
 | Erreur "Quota YouTube API dépassé" | Trop d'appels de découverte (recherche par mot-clé/chaîne similaire) dans la journée | Attends le lendemain (quota remis à 0) ou limite les recherches de découverte |
+| "L'extension vient peut-être d'être rechargée" | Le service worker s'est réveillé après une pause | Réouvre simplement le popup |
 
 ---
 
-Pour aller plus loin (architecture, variables d'environnement, déploiement
-sur un serveur distant, publication sur le Chrome Web Store), tout est dans
-le [`README.md`](./README.md).
+Pour aller plus loin (architecture, publication sur le Chrome Web Store),
+tout est dans le [`README.md`](./README.md).

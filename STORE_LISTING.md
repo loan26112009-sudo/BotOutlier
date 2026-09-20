@@ -35,7 +35,7 @@ WHAT YOU GET
 🔔 New-outlier alerts - a badge and a notification the moment something spikes, popup closed or not.
 🧭 Two feeds, one popup - the auto-detected outlier feed, and "My Picks" for everything you flagged yourself.
 
-Everything runs on your own backend, so you control what channels get tracked and how far back your history goes.
+Everything runs inside the extension itself - no server to install, no terminal, nothing to keep running. Just add channels and let it work.
 
 
 PRIVACY

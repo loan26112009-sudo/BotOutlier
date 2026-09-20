@@ -6,22 +6,22 @@ les données, pour rester transparent et conforme aux
 
 ## 1. Où vivent les données
 
-Par défaut, **tout reste en local, sur ta machine** :
+**Tout reste dans ton navigateur, sur ta machine** — il n'y a pas de serveur :
 
-- Le backend écrit dans un fichier SQLite local (`backend/outliers.db`).
-- Ta clé `YOUTUBE_API_KEY` reste dans `backend/.env`, sur ta machine — elle
-  n'est jamais envoyée ailleurs qu'à l'API officielle Google
-  (`googleapis.com`).
-- L'extension Chrome ne parle qu'à ce backend local (`http://127.0.0.1:8000`
-  par défaut) et à l'API YouTube (via le backend).
-- Une seule exception : les chaînes que tu épingles en haut de tes
-  abonnements (l'étoile dans le menu latéral de YouTube) sont une préférence
-  d'affichage stockée par Chrome lui-même (`chrome.storage.local`), sur ta
-  machine uniquement — elle ne transite jamais par le backend.
+- Chaînes, niches, vidéos, scores d'outliers et favoris sont stockés dans
+  `chrome.storage.local`, l'espace de stockage propre à l'extension dans ton
+  profil Chrome.
+- Ta clé API YouTube est stockée au même endroit, sur ta machine — elle
+  n'est envoyée qu'à l'API officielle Google (`googleapis.com`), jamais
+  ailleurs.
+- Les chaînes que tu épingles en haut de tes abonnements (l'étoile dans le
+  menu latéral de YouTube) suivent le même principe : `chrome.storage.local`,
+  rien d'autre.
 
-Si tu déploies le backend sur un serveur distant, ces données y sont
-stockées à la place — c'est alors à toi de sécuriser cet accès (voir
-[`LEGAL.md`](./LEGAL.md) si tu ouvres l'usage à d'autres personnes).
+Si tu synchronises ton profil Chrome avec ton compte Google,
+`chrome.storage.local` **n'est pas synchronisé** entre appareils (c'est
+`chrome.storage.sync` qui le serait, mais son quota est bien trop petit pour
+ce volume de données) — tes outliers restent propres à chaque ordinateur.
 
 ## 2. Ce qui est collecté et pourquoi
 
@@ -50,11 +50,11 @@ d'organisation (niches, favoris).
 ## 4. Durée de conservation
 
 - Les statistiques vidéo (vues, etc.) sont rafraîchies automatiquement
-  toutes les 2h — jamais figées plus de 30 jours sans mise à jour.
-- L'historique brut des compteurs de vues (`VideoSnapshot`) est
-  **automatiquement purgé au-delà de 30 jours**.
-- Tes favoris ("Liste d'outliers") et les chaînes que tu suis restent tant que tu
-  ne les supprimes pas toi-même.
+  toutes les 2h (réglable) — jamais figées plus de 30 jours sans mise à jour.
+- L'historique brut des compteurs de vues est **automatiquement purgé
+  au-delà de 30 jours**.
+- Tes favoris ("Ma liste") et les chaînes que tu suis restent tant que tu ne
+  les supprimes pas toi-même.
 
 ## 5. Contrôle et suppression
 
@@ -62,10 +62,11 @@ Tu contrôles tout depuis l'extension, sans délai :
 
 - **Retirer une chaîne** : bouton ✕ dans les réglages → suppression
   immédiate, ainsi que ses vidéos associées.
-- **Retirer un favori** : bouton ✕ dans l'onglet "Liste d'outliers" → suppression
+- **Retirer un favori** : bouton ✕ dans l'onglet "Ma liste" → suppression
   immédiate.
-- **Tout effacer** : arrête le backend et supprime le fichier
-  `backend/outliers.db`.
+- **Tout effacer** : `chrome://extensions` → détails de l'extension →
+  "Effacer les données de l'extension", ou simplement désinstalle
+  l'extension.
 
 ## 6. Contact
 
