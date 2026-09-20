@@ -155,3 +155,16 @@ button.secondary:hover { background: #4b5563; }
   align-items: center;
   margin-top: 4px;
 }
+
+.legal-footer {
+  font-size: 10px;
+  color: #6b7280;
+  line-height: 1.5;
+  text-align: center;
+  margin: 16px 0 0;
+}
+.legal-footer code {
+  background: #1f2937;
+  border-radius: 3px;
+  padding: 0 3px;
+}

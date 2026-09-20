@@ -9,6 +9,12 @@ crées). Le tout consultable depuis une **extension Chrome**.
 > (installation → premiers outliers → usage quotidien, ~15 min). Ce README-ci
 > est la référence technique.
 
+**© 2026 Loan — Tous droits réservés.** Projet non affilié, non sponsorisé
+et non approuvé par YouTube ou Google LLC. Utilise exclusivement l'API
+officielle YouTube Data v3 avec ta propre clé API. Voir [`LICENSE`](./LICENSE),
+[`LEGAL.md`](./LEGAL.md) (conformité API YouTube) et [`PRIVACY.md`](./PRIVACY.md)
+(données collectées).
+
 ## Comment ça marche
 
 ```
