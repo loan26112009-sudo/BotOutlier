@@ -1,38 +1,42 @@
+/* Ces couleurs sont volontairement écrites en dur (pas de var() ici) : ce
+   fichier est injecté sur youtube.com, une page qui n'a pas connaissance des
+   variables de theme.css définies pour le popup/les réglages de l'extension. */
+
 .of-heart-btn {
   position: absolute;
-  top: 4px;
-  right: 4px;
+  top: 6px;
+  right: 6px;
   z-index: 9999;
   width: 26px;
   height: 26px;
   border-radius: 50%;
   border: none;
-  background: rgba(17, 24, 39, 0.75);
+  background: rgba(15, 13, 26, 0.72);
   color: #fff;
   font-size: 15px;
   line-height: 26px;
   text-align: center;
   cursor: pointer;
   padding: 0;
-  opacity: 0;
+  opacity: 0.85;
+  backdrop-filter: blur(2px);
   transition: opacity 0.15s ease, transform 0.15s ease, background 0.15s ease;
 }
 
-a#thumbnail:hover .of-heart-btn,
+.of-heart-btn:hover {
+  opacity: 1;
+  transform: scale(1.15);
+  background: rgba(139, 92, 246, 0.85);
+}
+
 .of-heart-btn.of-active {
   opacity: 1;
-}
-
-.of-heart-btn.of-active {
-  background: rgba(239, 68, 68, 0.92);
-}
-
-.of-heart-btn:hover {
-  transform: scale(1.15);
+  background: linear-gradient(135deg, #8b5cf6, #6366f1);
+  box-shadow: 0 2px 10px rgba(139, 92, 246, 0.5);
 }
 
 .of-heart-btn.of-loading {
-  opacity: 0.6;
+  opacity: 0.5;
 }
 
 .of-floating-heart {
@@ -44,22 +48,32 @@ a#thumbnail:hover .of-heart-btn,
   height: 52px;
   border-radius: 50%;
   border: none;
-  background: #111827;
+  background: #15131f;
   color: #fff;
   font-size: 22px;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
-  transition: transform 0.15s ease, background 0.15s ease;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
 
 .of-floating-heart:hover {
-  transform: scale(1.08);
+  transform: scale(1.08) translateY(-1px);
 }
 
 .of-floating-heart.of-active {
-  background: #ef4444;
+  background: linear-gradient(135deg, #8b5cf6, #6366f1);
+  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.5);
 }
 
 .of-floating-heart.of-loading {
   opacity: 0.7;
+}
+
+/* Item injecté dans le menu ⋮ natif de YouTube — hérite du style natif via le
+   clonage d'un item existant ; on ajuste juste la couleur de l'icône. */
+.of-menu-item {
+  cursor: pointer;
+}
+.of-menu-item svg {
+  color: #8b5cf6;
 }

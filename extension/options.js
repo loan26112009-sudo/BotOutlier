@@ -14,14 +14,14 @@ async function initBackendUrl() {
 async function pingBackend() {
   const pill = document.getElementById("backendStatus");
   pill.textContent = "…";
-  pill.className = "pill";
+  pill.className = "pill-status";
   try {
     const s = await api.getStatus();
-    pill.textContent = s.youtube_api_key_configured ? "connecté ✓" : "connecté (clé API manquante)";
-    pill.className = "pill " + (s.youtube_api_key_configured ? "ok" : "err");
+    pill.textContent = s.youtube_api_key_configured ? "connecté ✓" : "clé API manquante";
+    pill.className = "pill-status " + (s.youtube_api_key_configured ? "ok" : "err");
   } catch (e) {
     pill.textContent = "injoignable";
-    pill.className = "pill err";
+    pill.className = "pill-status err";
   }
 }
 
@@ -81,7 +81,7 @@ async function loadChannels() {
   const ul = document.getElementById("channelList");
   ul.innerHTML = "";
   if (!channels.length) {
-    ul.innerHTML = '<li style="color:#6b7280">Aucune chaîne suivie pour l\'instant.</li>';
+    ul.innerHTML = '<li class="empty-row">Aucune chaîne suivie pour l\'instant — utilise le flux ci-dessus pour commencer.</li>';
     return;
   }
   const nicheById = Object.fromEntries(nichesCache.map((n) => [n.id, n.name]));
@@ -193,6 +193,7 @@ function renderDiscoverResults(container, results, defaultNiche) {
   if (defaultNiche) nicheSelect.value = defaultNiche;
 
   const addBtn = document.createElement("button");
+  addBtn.className = "ghost-btn";
   addBtn.textContent = "Ajouter la sélection";
   addBtn.addEventListener("click", async () => {
     const ids = checkboxes.filter((c) => c.cb.checked && !c.cb.disabled).map((c) => c.id);
@@ -237,6 +238,67 @@ document.getElementById("findByQuery").addEventListener("click", async () => {
   } catch (e) {
     container.innerHTML = `<p class="hint">${e.message}</p>`;
   }
+});
+
+// --- Flux simplifié : chaîne + niche décrite en texte libre + chaînes similaires ---
+
+document.getElementById("createFlowBtn").addEventListener("click", async () => {
+  const channelInput = document.getElementById("ownChannelInput");
+  const nicheInput = document.getElementById("nicheDescInput");
+  const linksInput = document.getElementById("similarLinksInput");
+  const feedback = document.getElementById("createFeedback");
+  const btn = document.getElementById("createFlowBtn");
+
+  const channel = channelInput.value.trim();
+  const niche = nicheInput.value.trim();
+
+  if (!channel) return setFeedback(feedback, "Colle le lien de ta chaîne YouTube pour commencer.", false);
+  if (!niche) return setFeedback(feedback, "Décris ta niche en quelques mots.", false);
+
+  const similarLinks = linksInput.value
+    .split(/[\n,]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  btn.disabled = true;
+  btn.textContent = "Création en cours…";
+  setFeedback(feedback, "", true);
+
+  const errors = [];
+  let added = 0;
+
+  try {
+    await api.addChannel(channel, niche);
+    added++;
+  } catch (e) {
+    errors.push(`ta chaîne : ${e.message}`);
+  }
+
+  for (const link of similarLinks) {
+    try {
+      await api.addChannel(link, niche);
+      added++;
+    } catch (e) {
+      errors.push(`${link} : ${e.message}`);
+    }
+  }
+
+  if (added > 0) {
+    setFeedback(
+      feedback,
+      `✓ ${added} chaîne(s) ajoutée(s) à "${niche}".${errors.length ? ` (${errors.length} lien(s) en échec)` : ""}`,
+      true
+    );
+    channelInput.value = "";
+    linksInput.value = "";
+  } else {
+    setFeedback(feedback, `Rien n'a pu être ajouté : ${errors[0] || "vérifie le lien de ta chaîne."}`, false);
+  }
+
+  btn.disabled = false;
+  btn.textContent = "🚀 Créer mon flux d'outliers";
+  await loadNiches();
+  await loadChannels();
 });
 
 async function refreshAll() {

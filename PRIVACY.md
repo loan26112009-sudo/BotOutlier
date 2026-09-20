@@ -14,6 +14,10 @@ Par défaut, **tout reste en local, sur ta machine** :
   (`googleapis.com`).
 - L'extension Chrome ne parle qu'à ce backend local (`http://127.0.0.1:8000`
   par défaut) et à l'API YouTube (via le backend).
+- Une seule exception : les chaînes que tu épingles en haut de tes
+  abonnements (l'étoile dans le menu latéral de YouTube) sont une préférence
+  d'affichage stockée par Chrome lui-même (`chrome.storage.local`), sur ta
+  machine uniquement — elle ne transite jamais par le backend.
 
 Si tu déploies le backend sur un serveur distant, ces données y sont
 stockées à la place — c'est alors à toi de sécuriser cet accès (voir
@@ -25,7 +29,7 @@ stockées à la place — c'est alors à toi de sécuriser cet accès (voir
 |---|---|---|
 | ID, titre, miniature, nombre d'abonnés d'une chaîne YouTube | API YouTube Data v3 (donnée publique) | Afficher la chaîne et calculer les outliers |
 | ID, titre, miniature, vues/likes/commentaires d'une vidéo | API YouTube Data v3 (donnée publique) | Calculer le score d'outlier |
-| Vidéos que tu "likes" (♡) en te baladant sur YouTube | Lue dans la page YouTube que **tu regardes déjà**, dans ton propre navigateur | Construire ta liste "Mes picks" |
+| Vidéos que tu "likes" (♡) en te baladant sur YouTube | Lue dans la page YouTube que **tu regardes déjà**, dans ton propre navigateur | Construire ta liste "Liste d'outliers" |
 | Niches que tu crées | Saisies par toi dans l'extension | Organiser/filtrer les outliers |
 
 Rien de tout cela n'est une donnée personnelle sensible : ce sont des
@@ -49,7 +53,7 @@ d'organisation (niches, favoris).
   toutes les 2h — jamais figées plus de 30 jours sans mise à jour.
 - L'historique brut des compteurs de vues (`VideoSnapshot`) est
   **automatiquement purgé au-delà de 30 jours**.
-- Tes favoris ("Mes picks") et les chaînes que tu suis restent tant que tu
+- Tes favoris ("Liste d'outliers") et les chaînes que tu suis restent tant que tu
   ne les supprimes pas toi-même.
 
 ## 5. Contrôle et suppression
@@ -58,7 +62,7 @@ Tu contrôles tout depuis l'extension, sans délai :
 
 - **Retirer une chaîne** : bouton ✕ dans les réglages → suppression
   immédiate, ainsi que ses vidéos associées.
-- **Retirer un favori** : bouton ✕ dans l'onglet "Mes picks" → suppression
+- **Retirer un favori** : bouton ✕ dans l'onglet "Liste d'outliers" → suppression
   immédiate.
 - **Tout effacer** : arrête le backend et supprime le fichier
   `backend/outliers.db`.

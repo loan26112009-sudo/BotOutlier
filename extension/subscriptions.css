@@ -1,0 +1,30 @@
+.of-sub-star {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 4px;
+  line-height: 1;
+  z-index: 5;
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+ytd-guide-entry-renderer:hover .of-sub-star,
+ytd-mini-guide-entry-renderer:hover .of-sub-star,
+.of-sub-star.of-active {
+  opacity: 1;
+}
+
+.of-sub-star.of-active {
+  color: #fbbf24;
+}
+
+.of-sub-star:hover {
+  transform: translateY(-50%) scale(1.2);
+}

@@ -1,5 +1,6 @@
 const listEl = document.getElementById("list");
 const statusBar = document.getElementById("statusBar");
+const statusText = document.getElementById("statusText");
 const nicheSelect = document.getElementById("nicheSelect");
 const minScoreSelect = document.getElementById("minScoreSelect");
 const refreshBtn = document.getElementById("refreshBtn");
@@ -27,23 +28,28 @@ function formatDate(iso) {
   return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
 }
 
+function setStatus(mode, text) {
+  statusBar.className = "status-bar " + mode;
+  statusText.textContent = text;
+}
+
 async function loadStatus() {
   try {
     const s = await api.getStatus();
     if (!s.youtube_api_key_configured) {
-      statusBar.textContent = "⚠️ Clé YOUTUBE_API_KEY manquante côté serveur (voir Réglages)";
+      setStatus("warn", "Il manque juste la clé API côté serveur — voir les réglages");
       return;
     }
-    const parts = [`${s.tracked_channels} chaînes suivies`, `${s.tracked_niches} niches`];
+    const parts = [`${s.tracked_channels} chaînes`, `${s.tracked_niches} niches`];
     if (s.refresh_in_progress) {
-      parts.push("rafraîchissement en cours…");
+      parts.push("scan en cours…");
     } else if (s.last_refresh_finished_at) {
       const d = new Date(s.last_refresh_finished_at + "Z");
       parts.push(`maj ${d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`);
     }
-    statusBar.textContent = parts.join(" · ");
+    setStatus("ok", parts.join(" · "));
   } catch (e) {
-    statusBar.textContent = "Backend injoignable — vérifie l'URL dans les réglages";
+    setStatus("err", "Ton serveur n'est pas branché — lance-le puis reviens ici");
   }
 }
 
@@ -82,7 +88,7 @@ async function loadOutliers() {
 
     const outliers = await api.getOutliers(params);
     if (!outliers.length) {
-      listEl.innerHTML = '<p class="empty">Aucun outlier détecté pour l\'instant.<br>Ajoute des chaînes dans les réglages, puis attends le prochain rafraîchissement.</p>';
+      listEl.innerHTML = '<p class="empty">🔍 Rien pour l\'instant.<br>Ajoute une chaîne dans les réglages, le prochain scan fera le tri.</p>';
       return;
     }
     listEl.innerHTML = "";
@@ -139,20 +145,20 @@ refreshBtn.addEventListener("click", async () => {
   refreshBtn.textContent = "…";
   try {
     await api.runRefresh();
-    statusBar.textContent = "Rafraîchissement lancé, ça peut prendre quelques dizaines de secondes…";
+    setStatus("warn", "Scan lancé — ça peut prendre quelques dizaines de secondes…");
     setTimeout(() => {
       loadStatus();
       loadOutliers();
     }, 8000);
   } catch (e) {
-    statusBar.textContent = `Erreur: ${e.message}`;
+    setStatus("err", `Erreur : ${e.message}`);
   } finally {
     refreshBtn.disabled = false;
     refreshBtn.textContent = "↻";
   }
 });
 
-// --- Onglet "Mes picks" (favoris ajoutés via le cœur sur YouTube) ---
+// --- Onglet "Ma liste" (outliers ajoutés à la main depuis YouTube) ---
 
 function formatFavDate(iso) {
   if (!iso) return "";
@@ -166,7 +172,7 @@ async function loadFavorites() {
     const favorites = await api.getFavorites(favNicheSelect.value || undefined);
     if (!favorites.length) {
       favListEl.innerHTML =
-        '<p class="empty">Aucun coup de cœur pour l\'instant.<br>Clique sur le ♡ qui apparaît sur les miniatures YouTube pour en ajouter.</p>';
+        '<p class="empty">⭐ Ta liste est vide.<br>Sur YouTube, ouvre le menu ⋮ d\'une vidéo (ou le cœur sur une miniature) → "Ajouter à la liste d\'outliers".</p>';
       return;
     }
     const nicheById = Object.fromEntries(nichesCache.map((n) => [n.id, n.name]));
@@ -220,7 +226,7 @@ async function loadFavorites() {
       const removeBtn = document.createElement("button");
       removeBtn.className = "fav-remove-btn";
       removeBtn.textContent = "✕";
-      removeBtn.title = "Retirer de mes picks";
+      removeBtn.title = "Retirer de la liste";
       removeBtn.addEventListener("click", async () => {
         await api.removeFavorite(f.youtube_video_id);
         await loadFavorites();

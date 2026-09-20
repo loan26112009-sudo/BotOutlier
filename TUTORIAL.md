@@ -140,18 +140,29 @@ toutes les 15 min), même popup fermé.
 Pas besoin d'ouvrir l'extension pour ça : va sur YouTube normalement.
 
 - **Sur une miniature** (accueil, recherche, suggestions) : survole-la, un
-  **♡** apparaît en haut à droite → clique → il devient **♥** rouge.
+  **♡** apparaît en haut à droite → clique → il devient **♥** violet.
 - **Sur une vidéo que tu regardes** : un cœur flottant en bas à droite de
   l'écran fait la même chose.
+- **Via le menu ⋮** d'une vidéo (celui avec "Regarder plus tard", etc.) :
+  option "Ajouter à la liste d'outliers", au même endroit que les autres
+  actions natives de YouTube. *(Fonctionnalité expérimentale : le menu de
+  YouTube change souvent, préviens-moi si l'option n'apparaît pas.)*
 
 ✅ **Tu dois voir** le cœur changer de couleur instantanément. Ça part tout
 seul vers le serveur, pas besoin de rien valider ailleurs.
+
+**Bonus — épingler tes chaînes préférées dans tes abonnements** : dans le
+menu latéral de YouTube, une étoile ☆ apparaît au survol de chaque chaîne
+abonnée. Clique dessus (elle devient ★) pour la faire remonter en haut de
+ta liste d'abonnements — pratique pour toujours voir tes chaînes de
+référence en premier. C'est une préférence propre à ton navigateur, pas liée
+au backend.
 
 ---
 
 ## Étape 7 — Retrouver et classer tes coups de cœur
 
-Retourne dans le popup → onglet **"❤️ Mes picks"**.
+Retourne dans le popup → onglet **"⭐ Ma liste"**.
 
 - Tous tes cœurs cliqués s'y retrouvent, du plus récent au plus ancien.
 - **Classe-les par niche** avec le menu déroulant de chaque carte (pratique
@@ -174,7 +185,7 @@ l'extension.
 3. En scrollant YouTube dans la journée, cœur ♡ sur tout ce qui te semble
    sortir du lot — même si le bot ne l'a pas encore détecté (il ne voit que
    les chaînes que tu lui as données).
-4. En fin de semaine, onglet "Mes picks" → range tes trouvailles par niche →
+4. En fin de semaine, onglet "Ma liste" → range tes trouvailles par niche →
    ça devient ta banque d'inspiration pour tes propres formats.
 
 ---

@@ -44,7 +44,7 @@ officielle YouTube Data v3 avec ta propre clé API. Voir [`LICENSE`](./LICENSE),
 - Un badge + une notification Chrome préviennent quand un **nouvel outlier**
   vient d'être détecté.
 - En te baladant sur YouTube, un **petit cœur ♡** apparaît sur chaque miniature
-  (et sur la page de lecture) : un clic l'ajoute à l'onglet **"Mes picks"** de
+  (et sur la page de lecture) : un clic l'ajoute à l'onglet **"Liste d'outliers"** de
   l'extension, sauvegardé en base côté backend (persistant, pas juste dans le
   navigateur).
 
@@ -170,21 +170,30 @@ te baladant sur YouTube :
 
 - **Sur les miniatures** (accueil, recherche, suggestions...) : survole une
   vidéo, un petit ♡ apparaît en haut à droite de la miniature. Clique dessus
-  pour l'ajouter à tes picks (il devient ♥ rouge).
+  pour l'ajouter à ta liste (il devient ♥ violet).
 - **Sur la page de lecture** : un cœur flottant en bas à droite de l'écran
   fait la même chose pour la vidéo en cours.
+- **Via le menu ⋮** d'une vidéo (celui avec "Regarder plus tard", "Enregistrer
+  dans une playlist"...) : une option "Ajouter à la liste d'outliers" apparaît
+  au même endroit que les actions natives de YouTube. *(Expérimental — le menu
+  de YouTube est une des parties les plus mouvantes de son DOM.)*
 - Tout est enregistré côté **backend** (pas juste dans le navigateur) : ouvre
-  l'onglet **"❤️ Mes picks"** du popup pour retrouver tous tes coups de cœur,
+  l'onglet **"⭐ Ma liste"** du popup pour retrouver tous tes coups de cœur,
   les classer par niche (menu déroulant sur chaque carte), ou les retirer.
 
 Comme c'est stocké en base sur le backend, ta liste survit à un changement
 d'ordinateur, une réinstallation de l'extension, un nettoyage du cache
 Chrome, etc. — tant que tu pointes vers la même base de données.
 
-> YouTube change régulièrement la structure de ses pages ; si le cœur
-> n'apparaît plus sur les miniatures après une mise à jour de YouTube, les
-> sélecteurs dans `extension/content.js` (fonction `scanThumbnails`) sont
-> l'endroit à ajuster.
+**Bonus — épingler des chaînes en haut de tes abonnements** : dans le menu
+latéral de YouTube, une étoile apparaît au survol de chaque chaîne abonnée ;
+cliquer dessus la fait remonter en haut de la liste. C'est une préférence
+locale à ton navigateur (`chrome.storage.local`), indépendante du backend.
+
+> YouTube change régulièrement la structure de ses pages ; si le cœur ou le
+> menu ⋮ n'apparaissent plus après une mise à jour de YouTube, les sélecteurs
+> dans `extension/content.js` (fonctions `scanCards`, `captureMenuContext`)
+> et `extension/subscriptions.js` sont l'endroit à ajuster.
 
 ## Détails techniques
 
@@ -207,17 +216,25 @@ Chrome, etc. — tant que tu pointes vers la même base de données.
 
 - `manifest.json` — Manifest V3, permissions minimales (`storage`, `alarms`,
   `notifications`) + `content_scripts` sur `youtube.com`.
+- `theme.css` — design system partagé (couleurs, boutons pill, cartes) entre
+  popup et réglages.
 - `api.js` — client fetch partagé vers le backend.
-- `popup.html/js/css` — onglets "Outliers auto" et "❤️ Mes picks", filtres,
-  refresh manuel.
-- `options.html/js/css` — gestion niches/chaînes/découverte.
+- `popup.html/js/css` — onglets "Outliers" et "⭐ Ma liste", filtres, refresh manuel.
+- `options.html/js/css` — flux d'onboarding simplifié (chaîne + niche décrite
+  en texte libre + chaînes similaires) en avant, réglages techniques
+  (URL backend, découverte avancée, niches) repliés dans un `<details>`.
 - `background.js` — service worker : poll toutes les 15 min pour les
-  notifications de nouveaux outliers, et relais réseau (`fetch`) pour le
-  content script (qui ne fait jamais d'appel réseau direct, pour rester
-  simple vis-à-vis de la CSP des pages YouTube).
+  notifications de nouveaux outliers, et relais réseau (`fetch`) pour les
+  content scripts (qui ne font jamais d'appel réseau direct, pour rester
+  simples vis-à-vis de la CSP des pages YouTube).
 - `content.js` / `content.css` — injectés sur `youtube.com` : cœur sur chaque
-  miniature + cœur flottant sur la page de lecture, communication avec
-  `background.js` via `chrome.runtime.sendMessage`.
+  miniature (ancienne et nouvelle structure `yt-lockup-view-model`) + cœur
+  flottant sur la page de lecture + item "Ajouter à la liste d'outliers"
+  injecté dans le menu ⋮ natif ; communication avec `background.js` via
+  `chrome.runtime.sendMessage`.
+- `subscriptions.js` / `subscriptions.css` — étoile pour épingler des chaînes
+  en haut du menu latéral d'abonnements (préférence locale, `chrome.storage.local`,
+  aucun lien avec le backend).
 
 ### Aller plus loin (pistes non implémentées)
 
