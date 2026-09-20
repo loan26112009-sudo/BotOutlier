@@ -163,8 +163,11 @@
       source_page: "watch",
     };
 
-    // Le titre/la chaîne se peaufinent une fois le DOM du lecteur chargé
-    setTimeout(() => {
+    // Le titre/la chaîne se peaufinent une fois le DOM du lecteur chargé. On
+    // tente une lecture immédiate (le DOM est parfois déjà prêt) puis on
+    // retente un peu plus tard en filet de sécurité, pour qu'un clic rapide
+    // sur le cœur n'enregistre pas un favori sans titre.
+    function refreshWatchMeta() {
       const titleEl = document.querySelector(
         "h1.ytd-watch-metadata yt-formatted-string, h1.title yt-formatted-string, h1.ytd-watch-metadata"
       );
@@ -172,8 +175,10 @@
       const channelEl = document.querySelector(
         "ytd-channel-name#channel-name a, #owner ytd-channel-name a, #channel-name a"
       );
-      if (channelEl) meta.channel_title = channelEl.textContent.trim();
-    }, 1000);
+      if (channelEl && channelEl.textContent.trim()) meta.channel_title = channelEl.textContent.trim();
+    }
+    refreshWatchMeta();
+    setTimeout(refreshWatchMeta, 1000);
 
     floatingBtn = document.createElement("button");
     floatingBtn.className = "of-floating-heart";
