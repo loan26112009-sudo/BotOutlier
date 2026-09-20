@@ -9,6 +9,7 @@ const favListEl = document.getElementById("favList");
 const favNicheSelect = document.getElementById("favNicheSelect");
 
 let nichesCache = [];
+let currentTab = "auto";
 
 document.getElementById("openOptions").addEventListener("click", (e) => {
   e.preventDefault();
@@ -33,9 +34,38 @@ function setStatus(mode, text) {
   statusText.textContent = text;
 }
 
+let backendReachable = false;
+function setBackendReachable(reachable) {
+  const wasReachable = backendReachable;
+  backendReachable = reachable;
+  document.getElementById("offlinePanel").classList.toggle("hidden", reachable);
+  document.getElementById("tabsNav").classList.toggle("hidden", !reachable);
+  document.getElementById("autoTab").classList.toggle("hidden", !reachable || currentTab !== "auto");
+  document.getElementById("favoritesTab").classList.toggle("hidden", !reachable || currentTab !== "favorites");
+  if (reachable && !wasReachable) {
+    loadNiches();
+    loadOutliers();
+  }
+}
+
+let watcherInterval = null;
+function startBackendWatcher() {
+  clearInterval(watcherInterval);
+  watcherInterval = setInterval(async () => {
+    try {
+      await api.getStatus();
+      setBackendReachable(true);
+      loadStatus();
+    } catch (e) {
+      setBackendReachable(false);
+    }
+  }, 4000);
+}
+
 async function loadStatus() {
   try {
     const s = await api.getStatus();
+    setBackendReachable(true);
     if (!s.youtube_api_key_configured) {
       setStatus("warn", "Il manque juste la clé API côté serveur — voir les réglages");
       return;
@@ -49,7 +79,8 @@ async function loadStatus() {
     }
     setStatus("ok", parts.join(" · "));
   } catch (e) {
-    setStatus("err", "Ton serveur n'est pas branché — lance-le puis reviens ici");
+    setStatus("err", "Ton serveur dort encore");
+    setBackendReachable(false);
   }
 }
 
@@ -253,15 +284,16 @@ document.querySelectorAll(".tab-btn").forEach((btn) => {
   btn.addEventListener("click", () => {
     document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
     btn.classList.add("active");
-    const tab = btn.dataset.tab;
-    document.getElementById("autoTab").classList.toggle("hidden", tab !== "auto");
-    document.getElementById("favoritesTab").classList.toggle("hidden", tab !== "favorites");
-    if (tab === "favorites") loadFavorites();
+    currentTab = btn.dataset.tab;
+    document.getElementById("autoTab").classList.toggle("hidden", currentTab !== "auto");
+    document.getElementById("favoritesTab").classList.toggle("hidden", currentTab !== "favorites");
+    if (currentTab === "favorites") loadFavorites();
   });
 });
 
 (async function init() {
   await loadNiches();
   await loadStatus();
+  startBackendWatcher();
   await loadOutliers();
 })();

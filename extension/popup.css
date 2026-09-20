@@ -1,7 +1,7 @@
 html, body {
   width: 400px;
   max-height: 600px;
-  border-radius: 18px;
+  border-radius: 24px;
   overflow: hidden;
 }
 
@@ -82,6 +82,25 @@ header {
 
 .tab-panel.hidden { display: none; }
 
+.offline-panel {
+  text-align: center;
+  padding: 40px 24px 44px;
+}
+.offline-panel-icon {
+  font-size: 40px;
+  margin-bottom: 10px;
+}
+.offline-panel strong {
+  display: block;
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+.offline-panel p {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-dim);
+}
+
 .toolbar {
   display: flex;
   gap: 8px;
@@ -123,7 +142,7 @@ header {
 .card img {
   width: 92px;
   height: 52px;
-  border-radius: 10px;
+  border-radius: 12px;
   object-fit: cover;
   flex-shrink: 0;
   background: var(--card-2);
@@ -209,7 +228,7 @@ footer a:hover { text-decoration: underline; }
 .fav-card img {
   width: 92px;
   height: 52px;
-  border-radius: 10px;
+  border-radius: 12px;
   object-fit: cover;
   flex-shrink: 0;
   background: var(--card-2);

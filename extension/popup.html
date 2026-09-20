@@ -24,7 +24,13 @@
       <span id="statusText">Connexion…</span>
     </div>
 
-    <nav class="segmented">
+    <div id="offlinePanel" class="offline-panel hidden">
+      <div class="offline-panel-icon">😴</div>
+      <strong>Ton serveur dort encore</strong>
+      <p>Démarre-le, cette fenêtre se réveillera toute seule.</p>
+    </div>
+
+    <nav id="tabsNav" class="segmented">
       <button class="tab-btn active" data-tab="auto">Outliers</button>
       <button class="tab-btn" data-tab="favorites">⭐ Ma liste</button>
     </nav>

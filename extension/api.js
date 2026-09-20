@@ -11,24 +11,36 @@ async function setBackendUrl(url) {
   await chrome.storage.sync.set({ backendUrl: url.replace(/\/+$/, "") });
 }
 
+// Message affiché partout dans l'interface quand le serveur ne répond pas du
+// tout (pas lancé, mauvaise adresse...). Un seul texte, simple, pas de jargon.
+const SERVER_OFFLINE_MESSAGE = "Ton serveur ne répond pas. Lance-le, puis reviens ici.";
+
 async function apiFetch(path, options = {}) {
   const base = await getBackendUrl();
-  const resp = await fetch(base + path, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {}),
-    },
-  });
+  let resp;
+  try {
+    resp = await fetch(base + path, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...(options.headers || {}),
+      },
+    });
+  } catch (e) {
+    // fetch() rejette avec un message technique ("Failed to fetch") dès que le
+    // serveur est injoignable : on le remplace toujours par un message clair.
+    throw new Error(SERVER_OFFLINE_MESSAGE);
+  }
+
   if (!resp.ok) {
-    let detail = resp.statusText;
+    let detail = "";
     try {
       const body = await resp.json();
-      detail = body.detail || JSON.stringify(body);
+      detail = body.detail || "";
     } catch (e) {
       // pas de corps JSON
     }
-    throw new Error(`${resp.status} ${detail}`);
+    throw new Error(detail || "Une erreur est survenue, réessaie dans un instant.");
   }
   if (resp.status === 204) return null;
   return resp.json();

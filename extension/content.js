@@ -122,22 +122,37 @@
     return btn;
   }
 
+  // On ne s'appuie plus sur des id précis (#thumbnail, #video-title) : ce sont
+  // exactement le genre de détails que YouTube change en premier lors d'une
+  // refonte, et ça suffit à faire disparaître le cœur partout d'un coup. On
+  // prend TOUS les liens vers une vidéo, et on filtre ceux qui ressemblent à
+  // une carte (miniature ou titre), pas un lien perdu dans une description.
+  function looksLikeVideoCard(link) {
+    if (link.id === "thumbnail" || link.id === "video-title") return true;
+    if (link.querySelector("img, yt-image, yt-thumbnail-view-model, yt-img-shadow")) return true;
+    return !!link.closest(CARD_SELECTOR);
+  }
+
   function scanCards() {
-    const anchors = document.querySelectorAll('a#thumbnail[href*="/watch?v="], a#video-title[href*="/watch"]');
+    const anchors = document.querySelectorAll('a[href*="/watch?v="]');
     if (!anchors.length) return;
 
     const newIds = [];
     const seenCards = new Set();
 
     anchors.forEach((link) => {
+      if (link.hasAttribute(PROCESSED_ATTR)) return;
+      link.setAttribute(PROCESSED_ATTR, "1");
+
+      if (!looksLikeVideoCard(link)) return;
+
       const href = link.getAttribute("href");
       const videoId = extractIdFromHref(href);
       if (!videoId) return;
 
       const card = link.closest(CARD_SELECTOR) || link;
-      if (card.hasAttribute(PROCESSED_ATTR) || seenCards.has(card)) return;
+      if (seenCards.has(card)) return;
       seenCards.add(card);
-      card.setAttribute(PROCESSED_ATTR, "1");
 
       const meta = extractMetaFromCard(card, videoId, "grid", href);
       const target = pickHeartAnchor(card, link);

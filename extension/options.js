@@ -1,4 +1,5 @@
 let nichesCache = [];
+let backendReachable = false;
 
 function setFeedback(el, message, ok) {
   el.textContent = message;
@@ -9,6 +10,33 @@ async function initBackendUrl() {
   const url = await getBackendUrl();
   document.getElementById("backendUrl").value = url;
   await pingBackend();
+  startBackendWatcher();
+}
+
+// Bandeau impossible à manquer + bouton désactivé quand le serveur ne
+// répond pas, avec un check automatique en arrière-plan : dès que le
+// serveur démarre, tout se débloque tout seul, pas besoin de recharger.
+function setBackendReachable(reachable) {
+  const wasReachable = backendReachable;
+  backendReachable = reachable;
+  document.getElementById("offlineBanner").classList.toggle("hidden", reachable);
+  document.getElementById("createFlowBtn").disabled = !reachable;
+  if (reachable && !wasReachable) {
+    refreshAll();
+  }
+}
+
+let watcherInterval = null;
+function startBackendWatcher() {
+  clearInterval(watcherInterval);
+  watcherInterval = setInterval(async () => {
+    try {
+      await api.getStatus();
+      setBackendReachable(true);
+    } catch (e) {
+      setBackendReachable(false);
+    }
+  }, 4000);
 }
 
 async function pingBackend() {
@@ -19,9 +47,11 @@ async function pingBackend() {
     const s = await api.getStatus();
     pill.textContent = s.youtube_api_key_configured ? "connecté ✓" : "clé API manquante";
     pill.className = "pill-status " + (s.youtube_api_key_configured ? "ok" : "err");
+    setBackendReachable(true);
   } catch (e) {
     pill.textContent = "injoignable";
     pill.className = "pill-status err";
+    setBackendReachable(false);
   }
 }
 
@@ -77,7 +107,12 @@ document.getElementById("addNiche").addEventListener("click", async () => {
 
 async function loadChannels() {
   const niche = document.getElementById("filterNiche").value;
-  const channels = await api.getChannels(niche);
+  let channels;
+  try {
+    channels = await api.getChannels(niche);
+  } catch (e) {
+    return; // le bandeau "serveur éteint" affiche déjà le problème
+  }
   const ul = document.getElementById("channelList");
   ul.innerHTML = "";
   if (!channels.length) {
@@ -308,5 +343,4 @@ async function refreshAll() {
 
 (async function init() {
   await initBackendUrl();
-  await refreshAll();
 })();

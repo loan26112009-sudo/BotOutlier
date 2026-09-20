@@ -13,11 +13,11 @@
   --accent-grad: linear-gradient(135deg, var(--accent-1), var(--accent-2));
   --danger: #f87171;
   --ok: #34d399;
-  --radius-lg: 22px;
-  --radius-md: 16px;
-  --radius-sm: 10px;
-  --shadow-card: 0 10px 30px rgba(0, 0, 0, 0.35);
-  --shadow-btn: 0 8px 20px rgba(139, 92, 246, 0.35);
+  --radius-lg: 28px;
+  --radius-md: 20px;
+  --radius-sm: 14px;
+  --shadow-card: 0 12px 32px rgba(0, 0, 0, 0.4);
+  --shadow-btn: 0 10px 24px rgba(139, 92, 246, 0.4);
 }
 
 * { box-sizing: border-box; }
@@ -25,7 +25,10 @@
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
-  background: var(--bg);
+  background:
+    radial-gradient(circle at 15% -10%, rgba(139, 92, 246, 0.16), transparent 45%),
+    radial-gradient(circle at 100% 0%, rgba(99, 102, 241, 0.12), transparent 40%),
+    var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
 }
@@ -98,6 +101,7 @@ textarea {
 input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--accent-1);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.18);
 }
 textarea { resize: vertical; min-height: 64px; }
 
@@ -115,3 +119,5 @@ a { color: var(--accent-1); }
 }
 .pill-status.ok { background: rgba(52, 211, 153, 0.15); color: var(--ok); }
 .pill-status.err { background: rgba(248, 113, 113, 0.15); color: var(--danger); }
+
+.hidden { display: none !important; }
