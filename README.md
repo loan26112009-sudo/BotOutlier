@@ -5,6 +5,10 @@ aux habitudes de leur propre chaîne (les "outliers"), triées par niche
 (Divertissement, Gaming, GTA, Fortnite, Cinéma, Mac, ou toute niche que tu
 crées). Le tout consultable depuis une **extension Chrome**.
 
+> 👉 Pressé de t'en servir ? Va droit au [**tuto d'utilisation pas à pas**](./TUTORIAL.md)
+> (installation → premiers outliers → usage quotidien, ~15 min). Ce README-ci
+> est la référence technique.
+
 ## Comment ça marche
 
 ```
