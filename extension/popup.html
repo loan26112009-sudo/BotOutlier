@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Outlier Finder</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header>
+    <h1>🚀 Outlier Finder</h1>
+    <div class="header-actions">
+      <button id="refreshBtn" title="Rafraîchir maintenant">↻</button>
+      <button id="settingsBtn" title="Réglages">⚙</button>
+    </div>
+  </header>
+
+  <div id="statusBar" class="status-bar">Chargement…</div>
+
+  <div class="toolbar">
+    <select id="nicheSelect">
+      <option value="">Toutes les niches</option>
+    </select>
+    <select id="minScoreSelect">
+      <option value="">Seuil : par défaut</option>
+      <option value="2">x2 et +</option>
+      <option value="3">x3 et +</option>
+      <option value="5">x5 et +</option>
+      <option value="10">x10 et +</option>
+    </select>
+  </div>
+
+  <div id="list" class="list">
+    <p class="empty">Chargement des outliers…</p>
+  </div>
+
+  <footer>
+    <a href="#" id="openOptions">Ajouter des chaînes / niches →</a>
+  </footer>
+
+  <script src="api.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

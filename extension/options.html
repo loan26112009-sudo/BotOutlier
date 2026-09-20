@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Outlier Finder — Réglages</title>
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+  <div class="wrap">
+    <h1>🚀 Outlier Finder — Réglages</h1>
+
+    <section>
+      <h2>1. Connexion au backend</h2>
+      <p class="hint">L'extension parle à ton petit serveur local (voir README du projet pour le lancer).</p>
+      <div class="row">
+        <input id="backendUrl" type="text" placeholder="http://127.0.0.1:8000" />
+        <button id="saveBackend">Enregistrer</button>
+        <span id="backendStatus" class="pill"></span>
+      </div>
+    </section>
+
+    <section>
+      <h2>2. Niches</h2>
+      <p class="hint">Crée des catégories pour trier les outliers (ex : Divertissement, Gaming, GTA, Fortnite, Cinéma, Mac…).</p>
+      <div class="row">
+        <input id="newNiche" type="text" placeholder="Nom de la niche" />
+        <button id="addNiche">Créer</button>
+      </div>
+      <ul id="nicheList" class="chip-list"></ul>
+    </section>
+
+    <section>
+      <h2>3. Ajouter une chaîne YouTube</h2>
+      <p class="hint">Colle une URL de chaîne (youtube.com/@..., /channel/UC..., /c/...) ou juste son nom.</p>
+      <div class="row">
+        <input id="channelInput" type="text" placeholder="https://www.youtube.com/@nomdelachaine" />
+        <select id="channelNiche"></select>
+        <button id="addChannel">Ajouter</button>
+      </div>
+      <div id="channelAddResult" class="feedback"></div>
+      <h3>Chaînes suivies</h3>
+      <div class="row">
+        <select id="filterNiche"><option value="">Toutes les niches</option></select>
+      </div>
+      <ul id="channelList" class="channel-list"></ul>
+    </section>
+
+    <section>
+      <h2>4. Découvrir des chaînes similaires</h2>
+      <p class="hint">Donne une chaîne "modèle" : l'outil cherche des chaînes proches par mots-clés.</p>
+      <div class="row">
+        <input id="seedChannel" type="text" placeholder="URL ou nom d'une chaîne à imiter" />
+        <button id="findSimilar">Chercher</button>
+      </div>
+      <div id="similarResults" class="discover-results"></div>
+    </section>
+
+    <section>
+      <h2>5. Découvrir par niche / mot-clé</h2>
+      <p class="hint">Ex : "gaming fr", "GTA RP", "cinéma critique"… puis coche les chaînes à suivre.</p>
+      <div class="row">
+        <input id="queryInput" type="text" placeholder="Mot-clé de niche" />
+        <button id="findByQuery">Chercher</button>
+      </div>
+      <div id="queryResults" class="discover-results"></div>
+    </section>
+
+    <section>
+      <h2>Réglages avancés</h2>
+      <p class="hint">Le seuil (multiplicateur) et la fréquence de rafraîchissement (2h par défaut) se configurent côté serveur, dans <code>backend/.env</code>.</p>
+    </section>
+  </div>
+
+  <script src="api.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>
