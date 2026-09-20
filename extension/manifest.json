@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Outlier Finder — YouTube",
+  "name": "Outlier Finder - by Loan",
   "version": "1.0.0",
   "description": "Détecte en direct les vidéos YouTube qui surperforment (outliers), triées par niche.",
   "action": {
